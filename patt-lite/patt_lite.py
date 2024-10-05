@@ -344,11 +344,10 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=FT_LR, global_cli
 # Training Procedure
 
 # Definisci la funzione di schedule
-def schedule(epoch, lr):
-    if epoch < FT_LR_DECAY_STEP:
-        return float(lr)
-    else:
-        return float(lr * FT_LR_DECAY_RATE)
+# Definisci la funzione di Cosine Annealing
+def cosine_annealing(epoch, lr):
+    return 0.5 * (1 + np.cos(np.pi * epoch / FT_EPOCH)) * FT_LR
+
 
 # Definisci i callback
 log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
