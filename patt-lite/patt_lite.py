@@ -16,6 +16,34 @@ import os
 from tensorflow.keras.regularizers import l2
 from keras.callbacks import ModelCheckpoint
 
+#### per creare nuove cartelle e salvare tutto ####
+
+def create_unique_directory(base_dir):
+    """
+    Crea una directory unica aggiungendo un numero di riferimento se la directory esiste già.
+    """
+    if not os.path.exists(base_dir):
+        os.makedirs(base_dir)
+        return base_dir
+    
+    counter = 1
+    new_dir = f"{base_dir}_{counter}"
+    while os.path.exists(new_dir):
+        counter += 1
+        new_dir = f"{base_dir}_{counter}"
+    
+    os.makedirs(new_dir)
+    return new_dir
+
+def save_parameters(params, directory, filename="parameters.txt"):
+    """
+    Salva i parametri in un file .txt nella directory specificata.
+    """
+    file_path = os.path.join(directory, filename)
+    with open(file_path, 'w') as f:
+        for key, value in params.items():
+            f.write(f"{key}: {value}\n")
+
 
 ############ modello con batch normalization prima di drop in patch extraction 
 
@@ -57,7 +85,13 @@ TRAIN_DROPOUT = best_hps['train_dropout']
 FT_EPOCH = 500
 FT_LR = best_hps_ft['ft_learning_rate']
 FT_LR_DECAY_STEP = 80.0
-FT_LR_DECAY_RATE = 1
+FT_LR_DECAY_RATE = 0.5 #era a 1 ma ho messo 0.5
+
+######
+# Epochs successive: Se l'epoca corrente è maggiore o uguale a FT_LR_DECAY_STEP,
+# la funzione riduce il learning rate moltiplicandolo per 0.5. Questo significa che il 
+# learning rate viene dimezzato per rendere l'addestramento più fine e stabile nelle fasi successive.
+
 FT_ES_PATIENCE = 20 #numero di epoche di tolleranza per l'arresto anticipato
 FT_DROPOUT = best_hps['train_dropout']
 dropout_rate = best_hps['dropout_rate']
@@ -358,6 +392,11 @@ test_loss, test_acc = model.evaluate(X_test, y_test)
 final_model_dir = os.path.join("final_models", dataset_name)
 os.makedirs(final_model_dir, exist_ok=True)
 
+# Creazione della directory unica per i risultati
+base_dir = final_model_dir
+unique_dir = create_unique_directory(base_dir)
+
+
 # Save the model in the specified directory with .keras extension
 model_name = os.path.join(final_model_dir, f"{dataset_name}_model.keras")
 model.save(model_name)
@@ -410,6 +449,10 @@ plt.title('Confusion Matrix')
 
 # Rotate the x-axis labels to avoid overlap
 plt.xticks(rotation=25, ha='right')
+# Creazione della directory unica per i risultati
+base_dir = results_dir
+unique_dir = create_unique_directory(base_dir)
+
 
 plt.savefig(os.path.join(results_dir, 'confusion_matrix.png'))
 plt.close()
@@ -443,6 +486,11 @@ plt.ylabel('Loss')
 plt.legend()
 plt.title('Training and Validation Loss')
 
+# Creazione della directory unica per i risultati
+base_dir = results_dir
+unique_dir = create_unique_directory(base_dir)
+
+
 plt.savefig(os.path.join(results_dir, 'training_validation_plots.png'))
 plt.show()
 
@@ -450,3 +498,31 @@ plt.show()
 # utilizzando MobileNet come backbone pre-addestrato. 
 # Il fine-tuning permette di migliorare ulteriormente le prestazioni del modello adattandolo meglio alle caratteristiche specifiche del  dataset.
 
+
+
+# Salvataggio dei parametri
+params = {
+    "NUM_CLASSES": NUM_CLASSES,
+    "IMG_SHAPE": IMG_SHAPE,
+    "BATCH_SIZE": BATCH_SIZE,
+    "TRAIN_EPOCH": TRAIN_EPOCH,
+    "TRAIN_LR": TRAIN_LR,
+    "TRAIN_ES_PATIENCE": TRAIN_ES_PATIENCE,
+    "TRAIN_LR_PATIENCE": TRAIN_LR_PATIENCE,
+    "TRAIN_MIN_LR": TRAIN_MIN_LR,
+    "TRAIN_DROPOUT": TRAIN_DROPOUT,
+    "FT_EPOCH": FT_EPOCH,
+    "FT_LR": FT_LR,
+    "FT_LR_DECAY_STEP": FT_LR_DECAY_STEP,
+    "FT_LR_DECAY_RATE": FT_LR_DECAY_RATE,
+    "FT_ES_PATIENCE": FT_ES_PATIENCE,
+    "FT_DROPOUT": FT_DROPOUT,
+    "dropout_rate": dropout_rate,
+    "ES_LR_MIN_DELTA": ES_LR_MIN_DELTA,
+    "pre_classification": pre_classification.get_config(),
+    "patch_extraction": patch_extraction.get_config()
+}
+
+save_parameters(params, unique_dir)
+print(f"Directory creata: {unique_dir}")
+print(f"Parametri salvati in: {os.path.join(unique_dir, 'parameters.txt')}")
