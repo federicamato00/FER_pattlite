@@ -5,6 +5,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
+from sklearn.decomposition import PCA
+
+def create_scatter_plot(X, y, classNames, title, path):
+    pca = PCA(n_components=2)
+    X_pca = pca.fit_transform(X.reshape((X.shape[0], -1)))
+    
+    plt.figure(figsize=(10, 5))
+    for class_idx in np.unique(y):
+        plt.scatter(X_pca[y == class_idx, 0], X_pca[y == class_idx, 1], label=classNames[class_idx], alpha=0.5)
+    plt.title(title)
+    plt.xlabel('PCA Component 1')
+    plt.ylabel('PCA Component 2')
+    plt.legend()
+    plt.savefig(path)
+    plt.close()
+
 
 def load_data(
     path_prefix,
@@ -87,6 +103,9 @@ def load_data(
     plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
     plt.savefig(os.path.join(path_distribution, 'prima_SMOTE.png'))
     
+     # Scatter plot prima di SMOTE
+    create_scatter_plot(X, y, classNames, 'Distribuzione dei dati prima di SMOTE', os.path.join(path_distribution, 'scatter_prima_SMOTE.png'))
+    
     # Controlla se le classi sono sbilanciate
     class_counts = np.bincount(y)
     max_count = np.max(class_counts)
@@ -113,6 +132,9 @@ def load_data(
         plt.ylabel('Numero di campioni')
         plt.xticks(ticks=np.unique(y_resampled), labels=[classNames[i] for i in np.unique(y_resampled)])
         plt.savefig(os.path.join(path_distribution,'dopo_SMOTE.png'))
+        
+        # Scatter plot dopo SMOTE
+        create_scatter_plot(X_resampled, y_resampled, classNames, 'Distribuzione dei dati dopo SMOTE', os.path.join(path_distribution, 'scatter_dopo_SMOTE.png'))
         
         X, y = X_resampled, y_resampled
     else:
