@@ -398,7 +398,7 @@ unique_dir = create_unique_directory(base_dir)
 
 
 # Save the model in the specified directory with .keras extension
-model_name = os.path.join(final_model_dir, f"{dataset_name}_model.keras")
+model_name = os.path.join(unique_dir, f"{dataset_name}_model.keras")
 model.save(model_name)
 
 print(f"Modello salvato in: {model_name}")
@@ -454,7 +454,7 @@ base_dir = results_dir
 unique_dir = create_unique_directory(base_dir)
 
 
-plt.savefig(os.path.join(results_dir, 'confusion_matrix.png'))
+plt.savefig(os.path.join(unique_dir, 'confusion_matrix.png'))
 plt.close()
 
 # Accedi alla storia dell'addestramento
@@ -486,12 +486,10 @@ plt.ylabel('Loss')
 plt.legend()
 plt.title('Training and Validation Loss')
 
-# Creazione della directory unica per i risultati
-base_dir = results_dir
-unique_dir = create_unique_directory(base_dir)
 
 
-plt.savefig(os.path.join(results_dir, 'training_validation_plots.png'))
+
+plt.savefig(os.path.join(unique_dir, 'training_validation_plots.png'))
 plt.show()
 
 # L'accuratezza che si ottiene prima del fine-tuning è quella del  modello addestrato sui dati del dataset analizzato, 

@@ -81,8 +81,8 @@ tuner = kt.Hyperband(build_model,
                      directory='my_dir',
                      project_name='intro_to_kt')
 
-stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
-reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=1e-6)
+stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10)
+reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.2, patience=5, min_lr=1e-6)
 
 # Aggiungi il batch size come iperparametro
 tuner.search(X_train, y_train, epochs=100, validation_data=(X_valid, y_valid), callbacks=[stop_early, reduce_lr], batch_size=kt.HyperParameters().Int('batch_size', min_value=8, max_value=64, step=8))

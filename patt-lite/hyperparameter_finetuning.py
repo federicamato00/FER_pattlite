@@ -97,8 +97,8 @@ ft_tuner = kt.Hyperband(build_finetune_model,
                         directory='my_dir',
                         project_name='finetune_kt')
 
-ft_stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10)
-ft_reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=1e-6)
+ft_stop_early = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=10)
+ft_reduce_lr = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_accuracy', factor=0.2, patience=5, min_lr=1e-6)
 
 # Cerca i migliori iperparametri per il fine-tuning
 ft_tuner.search(X_train, y_train, epochs=100, validation_data=(X_valid, y_valid), callbacks=[ft_stop_early, ft_reduce_lr])
