@@ -345,7 +345,7 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=FT_LR, global_cli
 
 # Definisci la funzione di schedule
 # Definisci la funzione di Cosine Annealing
-def cosine_annealing(epoch, lr):
+def schedule(epoch, lr):
     return 0.5 * (1 + np.cos(np.pi * epoch / FT_EPOCH)) * FT_LR
 
 
