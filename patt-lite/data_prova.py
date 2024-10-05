@@ -163,7 +163,7 @@ elif 'Bosphorus' in dataset_name:
 else:
     file_output = 'dataset'
 
-file_output = file_output + '_prova.h5'
+file_output = file_output + '_prova_noLDA.h5'
 
 
 with h5py.File(file_output, 'w') as dataset: 
