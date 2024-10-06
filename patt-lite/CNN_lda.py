@@ -5,20 +5,14 @@ import tensorflow as tf
 from tensorflow import keras
 from sklearn.utils import shuffle
 from sklearn.utils.class_weight import compute_class_weight
-import matplotlib 
-import tensorflow as tf
-from tensorflow.keras.layers import Layer, Dense
-from tensorflow.keras.callbacks import LearningRateScheduler
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 import matplotlib.pyplot as plt
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import os
 from tensorflow.keras.regularizers import l2
 from keras.callbacks import ModelCheckpoint
-from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Dense
-#### per creare nuove cartelle e salvare tutto ####
 
+# Funzioni di utilità per creare directory e salvare parametri
 def create_unique_directory(base_dir):
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
@@ -84,7 +78,7 @@ ES_LR_MIN_DELTA = 0.003
 
 dataset_name='Bosphorus'
 
-class ExpandDimsLayer(Layer):
+class ExpandDimsLayer(tf.keras.layers.Layer):
     def __init__(self, axis, **kwargs):
         super(ExpandDimsLayer, self).__init__(**kwargs)
         self.axis = axis
@@ -92,7 +86,7 @@ class ExpandDimsLayer(Layer):
     def call(self, inputs):
         return tf.expand_dims(inputs, axis=self.axis)
 
-class SqueezeLayer(Layer):
+class SqueezeLayer(tf.keras.layers.Layer):
     def __init__(self, axis, **kwargs):
         super(SqueezeLayer, self).__init__(**kwargs)
         self.axis = axis
@@ -115,7 +109,6 @@ elif 'BU_3DFE' in dataset_name:
 else:
     file_output = 'dataset.h5'
 
-# Supponiamo che i tuoi dati siano memorizzati in un file HDF5 chiamato 'data.h5'
 with h5py.File(file_output, 'r') as f:
     X_train = np.array(f['X_train'])
     y_train = np.array(f['y_train'])
@@ -124,7 +117,6 @@ with h5py.File(file_output, 'r') as f:
     X_test = np.array(f['X_test'])
     y_test = np.array(f['y_test'])
 
-# Verifica che i dati non siano vuoti
 assert X_train.size > 0, "X_train è vuoto"
 assert y_train.size > 0, "y_train è vuoto"
 assert X_valid.size > 0, "X_valid è vuoto"
@@ -132,13 +124,6 @@ assert y_valid.size > 0, "y_valid è vuoto"
 assert X_test.size > 0, "X_test è vuoto"
 assert y_test.size > 0, "y_test è vuoto"
 
-# Applica LDA ai dati
-lda = LDA(n_components=2)
-X_train = lda.fit_transform(X_train.reshape((X_train.shape[0], -1)), y_train)
-X_valid = lda.transform(X_valid.reshape((X_valid.shape[0], -1)))
-X_test = lda.transform(X_test.reshape((X_test.shape[0], -1)))
-
-# Load your data here, PAtt-Lite was trained with h5py for shorter loading time
 X_train, y_train = shuffle(X_train, y_train)
 
 print("Shape of train_sample: {}".format(X_train.shape))
@@ -151,24 +136,139 @@ print("Shape of test_label: {}".format(y_test.shape))
 class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
 class_weights = dict(enumerate(class_weights))
 
-# Modello per dati trasformati da LDA
-model = Sequential()
-model.add(Dense(64, input_shape=(2,), activation='relu'))
-model.add(Dense(32, activation='relu'))
-model.add(Dense(NUM_CLASSES, activation='softmax'))
+input_layer = tf.keras.Input(shape=IMG_SHAPE, name='universal_input')
+sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
+data_augmentation = tf.keras.Sequential([
+        tf.keras.layers.RandomFlip(mode='horizontal'),
+        tf.keras.layers.RandomRotation(0.2),
+        tf.keras.layers.RandomContrast(factor=0.3)
+    ], name="augmentation")
+preprocess_input = tf.keras.applications.mobilenet.preprocess_input
 
+backbone = tf.keras.applications.mobilenet.MobileNet(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
+backbone.trainable = False
+base_model = tf.keras.Model(backbone.input, backbone.layers[-29].output, name='base_model')
+
+self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
+
+patch_extraction = tf.keras.Sequential([
+    tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
+    tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
+    tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
+], name='patch_extraction')
+
+global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name='gap')
+pre_classification = tf.keras.Sequential([
+    tf.keras.layers.Dense(best_hps['units'], activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])), 
+    tf.keras.layers.BatchNormalization(),  
+    tf.keras.layers.Dropout(dropout_rate)
+], name='pre_classification')
+
+prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", name='classification_head')
+
+# Estrai le feature dal modello fino al livello di estrazione delle patch
+feature_extractor = tf.keras.Model(inputs=input_layer, outputs=patch_extraction(base_model(preprocess_input(data_augmentation(sample_resizing(input_layer))))))
+
+# Estrai le feature dal dataset di training
+X_train_features = feature_extractor.predict(X_train)
+X_valid_features = feature_extractor.predict(X_valid)
+X_test_features = feature_extractor.predict(X_test)
+
+# Applica LDA
+lda = LDA(n_components=NUM_CLASSES - 1)
+X_train_lda = lda.fit_transform(X_train_features.reshape(X_train_features.shape[0], -1), y_train)
+X_valid_lda = lda.transform(X_valid_features.reshape(X_valid_features.shape[0], -1))
+X_test_lda = lda.transform(X_test_features.reshape(X_test_features.shape[0], -1))
+
+# Costruisci il modello finale utilizzando le feature trasformate da LDA
+inputs = tf.keras.Input(shape=(X_train_lda.shape[1],), name='lda_input')
+x = tf.keras.layers.Dense(best_hps['units'], activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))(inputs)
+x = tf.keras.layers.BatchNormalization()(x)
+x = tf.keras.layers.Dropout(dropout_rate)(x)
+outputs = prediction_layer(x)
+
+model = tf.keras.Model(inputs, outputs, name='lda_model')
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=TRAIN_LR, global_clipnorm=3.0), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
+# Training Procedure
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=TRAIN_ES_PATIENCE, min_delta=ES_LR_MIN_DELTA, restore_best_weights=True)
 learning_rate_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_accuracy', patience=TRAIN_LR_PATIENCE, verbose=0, min_delta=ES_LR_MIN_DELTA, min_lr=TRAIN_MIN_LR)
-history = model.fit(X_train, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid, y_valid), verbose=1, 
+history = model.fit(X_train_lda, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid_lda, y_valid), verbose=0, 
                     class_weight=class_weights, callbacks=[early_stopping_callback, learning_rate_callback])
-test_loss, test_acc = model.evaluate(X_test, y_test)
+test_loss, test_acc = model.evaluate(X_test_lda, y_test)
 
 print(f"Test Accuracy: {test_acc}")
 
-# Salva il modello addestrato
-final_model_dir = os.path.join("final_models/lda_Bosphorous", dataset_name)
+# Model Finetuning
+print("\nFinetuning ...")
+unfreeze = 59
+base_model.trainable = True
+fine_tune_from = len(base_model.layers) - unfreeze
+for layer in base_model.layers[:fine_tune_from]:
+    layer.trainable = False
+for layer in base_model.layers[fine_tune_from:]:
+    if isinstance(layer, tf.keras.layers.BatchNormalization):
+        layer.trainable = False
+
+# Estrai nuovamente le feature per il fine-tuning
+X_train_features = feature_extractor.predict(X_train)
+X_valid_features = feature_extractor.predict(X_valid)
+X_test_features = feature_extractor.predict(X_test)
+
+# Applica LDA
+X_train_lda = lda.fit_transform(X_train_features.reshape(X_train_features.shape[0], -1), y_train)
+X_valid_lda = lda.transform(X_valid_features.reshape(X_valid_features.shape[0], -1))
+X_test_lda = lda.transform(X_test_features.reshape(X_test_features.shape[0], -1))
+
+# Ricostruisci il modello finale per il fine-tuning
+inputs = tf.keras.Input(shape=(X_train_lda.shape[1],), name='lda_input')
+x = tf.keras.layers.Dense(best_hps['units'], activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))(inputs)
+x = tf.keras.layers.BatchNormalization()(x)
+x = tf.keras.layers.Dropout(dropout_rate)(x)
+outputs = prediction_layer(x)
+
+model = tf.keras.Model(inputs, outputs, name='lda_model_finetune')
+model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=FT_LR, global_clipnorm=3.0), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
+# Definisci la funzione di schedule
+def schedule(epoch, lr):
+    return 0.5 * (1 + np.cos(np.pi * epoch / FT_EPOCH)) * FT_LR
+
+# Definisci i callback
+log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy', min_delta=ES_LR_MIN_DELTA, patience=FT_ES_PATIENCE, restore_best_weights=True)
+scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
+
+# Directory per salvare i pesi del modello
+checkpoint_dir = os.path.join("checkpoints/noLDA", dataset_name)
+os.makedirs(checkpoint_dir, exist_ok=True)
+checkpoint_path = os.path.join(checkpoint_dir, "cp-{epoch:04d}.weights.h5")
+
+checkpoint_callback = ModelCheckpoint(
+    filepath='model_weights_epoch_{epoch:02d}.weights.h5',
+    save_weights_only=True,
+    save_best_only=True,
+)
+
+latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
+if latest_checkpoint:
+    model.load_weights(latest_checkpoint)
+    print(f"Pesi del modello caricati da: {latest_checkpoint}")
+
+history_finetune = model.fit(
+    X_train_lda, y_train, 
+    epochs=FT_EPOCH, 
+    batch_size=BATCH_SIZE, 
+    validation_data=(X_valid_lda, y_valid), 
+    verbose=1, 
+    initial_epoch=history.epoch[-TRAIN_ES_PATIENCE], 
+    callbacks=[early_stopping_callback, scheduler_callback, tensorboard_callback, checkpoint_callback]
+)
+
+test_loss, test_acc = model.evaluate(X_test_lda, y_test)
+
+final_model_dir = os.path.join("final_models/noLDA", dataset_name)
 os.makedirs(final_model_dir, exist_ok=True)
 
 base_dir = final_model_dir
@@ -179,7 +279,10 @@ model.save(model_name)
 
 print(f"Modello salvato in: {model_name}")
 
-y_pred_prob = model.predict(X_test)
+print(f"Test Loss: {test_loss}")
+print(f"Test Accuracy: {test_acc}")
+
+y_pred_prob = model.predict(X_test_lda)
 y_pred = np.argmax(y_pred_prob, axis=1)
 
 correct_predictions = np.sum(y_pred == y_test)
@@ -191,7 +294,7 @@ print(f"Numero di predizioni sbagliate: {incorrect_predictions}")
 accuracy = correct_predictions / len(y_test)
 print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
-results_dir = os.path.join("results/lda_Bosphorous", dataset_name)
+results_dir = os.path.join("results/noLDA", dataset_name)
 os.makedirs(results_dir, exist_ok=True)
 
 cm = confusion_matrix(y_test, y_pred)
@@ -220,7 +323,7 @@ unique_dir = create_unique_directory(base_dir)
 plt.savefig(os.path.join(unique_dir, 'confusion_matrix.png'))
 plt.close()
 
-history = history.history
+history = history_finetune.history
 
 train_accuracy = history['accuracy']
 val_accuracy = history['val_accuracy']
@@ -266,6 +369,8 @@ params = {
     "FT_DROPOUT": FT_DROPOUT,
     "dropout_rate": dropout_rate,
     "ES_LR_MIN_DELTA": ES_LR_MIN_DELTA,
+    "pre_classification": pre_classification.get_config(),
+    "patch_extraction": patch_extraction.get_config()
 }
 
 save_parameters(params, unique_dir)

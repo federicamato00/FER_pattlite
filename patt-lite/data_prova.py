@@ -6,27 +6,134 @@ import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from imblearn.over_sampling import SMOTE
 from sklearn.decomposition import PCA
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 
-def create_scatter_plot(X, y, classNames, title, path):
-    pca = PCA(n_components=2)
-    X_pca = pca.fit_transform(X.reshape((X.shape[0], -1)))
+
+
+def create_pairwise_scatter_plot_LDA(X, y, classNames, title, path, n_components=2):
+    lda = LDA(n_components=n_components)
+    X_transformed = lda.fit_transform(X, y)
     
-    plt.figure(figsize=(10, 5))
-    for class_idx in np.unique(y):
-        plt.scatter(X_pca[y == class_idx, 0], X_pca[y == class_idx, 1], label=classNames[class_idx], alpha=0.5)
-    plt.title(title)
-    plt.xlabel('PCA Component 1')
-    plt.ylabel('PCA Component 2')
-    plt.legend()
+    fig, axes = plt.subplots(n_components, n_components, figsize=(15, 15))
+    fig.suptitle(title)
+    
+    for i in range(n_components):
+        for j in range(n_components):
+            if i != j:
+                ax = axes[i, j]
+                for class_idx in np.unique(y):
+                    ax.scatter(X_transformed[y == class_idx, i], X_transformed[y == class_idx, j], label=classNames[class_idx], alpha=0.5)
+                if i == n_components - 1:
+                    ax.set_xlabel(f'Component {j + 1}')
+                if j == 0:
+                    ax.set_ylabel(f'Component {i + 1}')
+            else:
+                axes[i, j].axis('off')
+    
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper right')
     plt.savefig(path)
     plt.close()
 
+
+    
+def create_scatter_plot_PCA(X, y, classNames, title, path, n_components=2):
+    pca = PCA(n_components=n_components)
+    X_pca = pca.fit_transform(X.reshape((X.shape[0], -1)))
+    
+     
+    fig, axes = plt.subplots(n_components, n_components, figsize=(15, 15))
+    fig.suptitle(title)
+    
+    for i in range(n_components):
+        for j in range(n_components):
+            if i != j:
+                ax = axes[i, j]
+                for class_idx in np.unique(y):
+                    ax.scatter(X_pca[y == class_idx, i], X_pca[y == class_idx, j], label=classNames[class_idx], alpha=0.5)
+                if i == n_components - 1:
+                    ax.set_xlabel(f'PCA Component {j + 1}')
+                if j == 0:
+                    ax.set_ylabel(f'PCA Component {i + 1}')
+            else:
+                axes[i, j].axis('off')
+    
+    handles, labels = ax.get_legend_handles_labels()
+    fig.legend(handles, labels, loc='upper right')
+    plt.savefig(path)
+    plt.close()
+
+def choose_n_components_lda(X, y, variance_threshold=0.95):
+    X = X.reshape((X.shape[0], -1))
+    lda = LDA().fit(X, y)
+    explained_variance_ratio = lda.explained_variance_ratio_
+    cumulative_variance = np.cumsum(explained_variance_ratio)
+    
+    # Trova il numero di componenti che spiegano almeno il variance_threshold della varianza
+    n_components = np.argmax(cumulative_variance >= variance_threshold) + 1
+    
+    # Grafico della varianza spiegata cumulativa
+    plt.figure(figsize=(10, 5))
+    plt.plot(cumulative_variance, marker='o')
+    plt.axhline(y=variance_threshold, color='r', linestyle='--')
+    plt.xlabel('Numero di Componenti')
+    plt.ylabel('Varianza Spiegata Cumulativa')
+    plt.title('Scelta del Numero di Componenti LDA')
+    plt.savefig(os.path.join('dataset_distribution/Bosphorus', 'varianza_spiegata_cumulativa_LDA.png'))
+    plt.close()
+    return n_components
+
+def choose_n_components_PCA(X, variance_threshold=0.95):
+    pca = PCA().fit(X)
+    cumulative_variance = np.cumsum(pca.explained_variance_ratio_)
+    
+    # Trova il numero di componenti che spiegano almeno il variance_threshold della varianza
+    n_components = np.argmax(cumulative_variance >= variance_threshold) + 1
+    
+    # Grafico della varianza spiegata cumulativa
+    plt.figure(figsize=(10, 5))
+    plt.plot(cumulative_variance, marker='o')
+    plt.axhline(y=variance_threshold, color='r', linestyle='--')
+    plt.xlabel('Numero di Componenti')
+    plt.ylabel('Varianza Spiegata Cumulativa')
+    plt.title('Scelta del Numero di Componenti PCA')
+    plt.savefig(os.path.join('dataset_distribution/Bosphorus', 'varianza_spiegata_cumulativa_PCA.png'))
+    plt.close()
+    
+    return n_components
+
+def apply_lda(X, y, n_components_lda):
+    lda = LDA(n_components=n_components_lda)
+    X_lda = lda.fit_transform(X.reshape((X.shape[0], -1)), y)
+    return X_lda
+
+def create_directory(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
+
+def get_unique_directory(base_path, name):
+    path = os.path.join(base_path, name)
+    counter = 1
+    while os.path.exists(path):
+        path = os.path.join(base_path, f"{name}_{counter}")
+        counter += 1
+    return path
+
+def save_dataset(X, y, path, filename):
+    create_directory(path)
+    file_output = os.path.join(path, filename)
+    with h5py.File(file_output, 'w') as dataset: 
+        dataset.create_dataset('X', data=X)
+        dataset.create_dataset('y', data=y)
 
 def load_data(
     path_prefix,
     dataset_name,
     test_size=0.2,
     val_size=0.1,
+    use_pca=False, 
+    use_lda=False,
+    use_smote=False,
 ):
     X, y = [], []
 
@@ -47,7 +154,7 @@ def load_data(
         classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
     PATH = os.path.join(path_prefix, dataset_name)
-    path_distribution = os.path.join('dataset_distribution', dataset_name)
+    path_distribution = os.path.join('dataset_distribution/Bosphorus', dataset_name)
     if dataset_name == 'CK+':
         for classes in os.listdir(PATH):
             if classes != '.DS_Store':
@@ -94,52 +201,104 @@ def load_data(
     print(f"X shape: {X.shape}")
     print(f"y shape: {y.shape}")
     
+    # Creare le directory per salvare i dati e i grafici
+    dataset_dir = get_unique_directory('datasets', dataset_name)
+    create_directory(dataset_dir)
+    create_directory(path_distribution)
+    
+   
+    
     # Visualizza la distribuzione delle classi prima di SMOTE
     plt.figure(figsize=(10, 5))
     plt.bar(np.unique(y), np.bincount(y))
-    plt.title('Distribuzione delle classi prima di SMOTE')
+    plt.title('Distribuzione delle classi')
     plt.xlabel('Classi')
     plt.ylabel('Numero di campioni')
     plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
-    plt.savefig(os.path.join(path_distribution, 'prima_SMOTE.png'))
+    plt.savefig(os.path.join(path_distribution, 'distribution_dataset.png'))
     
-     # Scatter plot prima di SMOTE
-    create_scatter_plot(X, y, classNames, 'Distribuzione dei dati prima di SMOTE', os.path.join(path_distribution, 'scatter_prima_SMOTE.png'))
+    if use_smote:
+        # Controlla se le classi sono sbilanciate
+        class_counts = np.bincount(y)
+        max_count = np.max(class_counts)
+        imbalance_threshold = 0.5  # Soglia per considerare una classe sbilanciata (50%)
+        is_imbalanced = any(count < max_count * (1 - imbalance_threshold) for count in class_counts)
+        
+        if is_imbalanced:
+            print("Le classi sono sbilanciate. Applicazione di SMOTE...")
+            # Reshape X for SMOTE
+            X_reshaped = X.reshape((X.shape[0], -1))
+            
+            # Apply SMOTE to the data
+            smote = SMOTE(random_state=42)
+            X_resampled, y_resampled = smote.fit_resample(X_reshaped, y)
+            
+            # Reshape X back to original shape
+            X_resampled = X_resampled.reshape((-1, IMG_SIZE, IMG_SIZE, 3))
+            
+            # Visualizza la distribuzione delle classi dopo SMOTE
+            plt.figure(figsize=(10, 5))
+            plt.bar(np.unique(y_resampled), np.bincount(y_resampled))
+            plt.title('Distribuzione delle classi dopo SMOTE')
+            plt.xlabel('Classi')
+            plt.ylabel('Numero di campioni')
+            plt.xticks(ticks=np.unique(y_resampled), labels=[classNames[i] for i in np.unique(y_resampled)])
+            plt.savefig(os.path.join(path_distribution,'dopo_SMOTE.png'))
+            
+            X, y = X_resampled, y_resampled
+        else:
+            print("Le classi sono bilanciate. SMOTE non è necessario.")
+
+    if use_pca:
+
     
-    # Controlla se le classi sono sbilanciate
-    class_counts = np.bincount(y)
-    max_count = np.max(class_counts)
-    imbalance_threshold = 0.5  # Soglia per considerare una classe sbilanciata (10%)
-    is_imbalanced = any(count < max_count * (1 - imbalance_threshold) for count in class_counts)
+        # # Scegliere il numero di componenti per PCA
+        n_components = choose_n_components_PCA(X.reshape((X.shape[0], -1)))
+        print(f"Numero di componenti PCA scelto: {n_components}")
+        
+        # # Applicare PCA
+        pca = PCA(n_components=n_components)
+        X_pca = pca.fit_transform(X.reshape((X.shape[0], -1)))
+        if use_lda and not use_smote:
+            title = 'PCA_scatter_PCA_LDA.png'
+        if use_lda and use_smote:
+            title = 'PCA_scatter_PCA_LDA_SMOTE.png'
+        if not use_lda and not use_smote:
+            title = 'PCA_scatter_PCA.png'
+        if not use_lda and use_smote:
+            title = 'PCA_scatter_PCA_SMOTE.png'
+        create_scatter_plot_PCA(X, y, classNames, 'Distribuzione dei dati dopo PCA', os.path.join(path_distribution, title), n_components)
+
+        X, y = X_pca, y
     
-    if is_imbalanced:
-        print("Le classi sono sbilanciate. Applicazione di SMOTE...")
-        # Reshape X for SMOTE
-        X_reshaped = X.reshape((X.shape[0], -1))
+    if use_lda:
+
+        # Apply LDA
+        n_components_lda = choose_n_components_lda(X, y)
+        X_lda = apply_lda(X, y, n_components_lda=n_components_lda)
+
+        print(f"Numero di componenti LDA scelto: {n_components_lda}")
         
-        # Apply SMOTE to the data
-        smote = SMOTE(random_state=42)
-        X_resampled, y_resampled = smote.fit_resample(X_reshaped, y)
-        
-        # Reshape X back to original shape
-        X_resampled = X_resampled.reshape((-1, IMG_SIZE, IMG_SIZE, 3))
-        
-        # Visualizza la distribuzione delle classi dopo SMOTE
+        # Visualizza la distribuzione delle classi dopo LDA
         plt.figure(figsize=(10, 5))
-        plt.bar(np.unique(y_resampled), np.bincount(y_resampled))
-        plt.title('Distribuzione delle classi dopo SMOTE')
+        plt.bar(np.unique(y), np.bincount(y))
+        plt.title('Distribuzione delle classi dopo LDA')
         plt.xlabel('Classi')
         plt.ylabel('Numero di campioni')
-        plt.xticks(ticks=np.unique(y_resampled), labels=[classNames[i] for i in np.unique(y_resampled)])
-        plt.savefig(os.path.join(path_distribution,'dopo_SMOTE.png'))
+        plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
+        plt.savefig(os.path.join(path_distribution, 'dopo_LDA.png'))
+        if use_pca and not use_smote:
+            title = 'LDA_scatter_PCA_LDA.png'
+        if use_pca and use_smote:
+            title = 'LDA_scatter_PCA_LDA_SMOTE.png'
+        if not use_pca and not use_smote:
+            title = 'LDA_scatter_LDA.png'
+        if not use_pca and use_smote:
+            title = 'LDA_scatter_LDA_SMOTE.png'
         
-        # Scatter plot dopo SMOTE
-        create_scatter_plot(X_resampled, y_resampled, classNames, 'Distribuzione dei dati dopo SMOTE', os.path.join(path_distribution, 'scatter_dopo_SMOTE.png'))
+        # Scatter plot dopo LDA
+        create_pairwise_scatter_plot_LDA(X_lda, y, classNames, 'Distribuzione dei dati dopo LDA', os.path.join(path_distribution, title), n_components_lda)
         
-        X, y = X_resampled, y_resampled
-    else:
-        print("Le classi sono bilanciate. SMOTE non è necessario.")
-    
     # Split the data into train, val, and test sets
     X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size + val_size, random_state=42, stratify=y)
     val_size_adjusted = val_size / (test_size + val_size)
@@ -149,7 +308,10 @@ def load_data(
 
 
 dataset_name='Bosphorus' # 'CK+', 'RAFDB', 'FERP', 'JAFFE', 'Bosphorus'
-X, y = load_data('', dataset_name)
+
+
+print("Loading data...")
+X, y = load_data('', dataset_name, use_pca=False, use_lda=False, use_smote=False)
 if 'CK+' in dataset_name:
     file_output = 'ckplus' 
 elif 'RAFDB' in dataset_name:
@@ -163,7 +325,33 @@ elif 'Bosphorus' in dataset_name:
 else:
     file_output = 'dataset'
 
-file_output = file_output + '_prova_noLDA.h5'
+file_output = file_output + '.h5'
+
+with h5py.File(file_output, 'w') as dataset: 
+    for split in X.keys():
+        dataset.create_dataset(f'X_{split}', data=X[split])
+        dataset.create_dataset(f'y_{split}', data=y[split])
+
+del X, y
+
+print("Loading data with SMOTE...")
+
+X, y = load_data('', dataset_name, use_pca=False, use_lda=False, use_smote=True)
+if 'CK+' in dataset_name:
+    file_output = 'ckplus' 
+elif 'RAFDB' in dataset_name:
+    file_output = 'rafdb' 
+elif 'FERP' in dataset_name:
+    file_output = 'ferp'
+elif 'JAFFE' in dataset_name:
+    file_output = 'jaffe'
+elif 'Bosphorus' in dataset_name:
+    file_output = 'bosphorus'
+else:
+    file_output = 'dataset'
+
+file_output = file_output + '_SMOTE.h5'
+
 
 
 with h5py.File(file_output, 'w') as dataset: 
@@ -172,3 +360,173 @@ with h5py.File(file_output, 'w') as dataset:
         dataset.create_dataset(f'y_{split}', data=y[split])
 
 del X, y
+
+
+print("Loading data with LDA...")
+
+
+X, y = load_data('', dataset_name, use_pca=False, use_lda=True, use_smote=False)
+if 'CK+' in dataset_name:
+    file_output = 'ckplus' 
+elif 'RAFDB' in dataset_name:
+    file_output = 'rafdb' 
+elif 'FERP' in dataset_name:
+    file_output = 'ferp'
+elif 'JAFFE' in dataset_name:
+    file_output = 'jaffe'
+elif 'Bosphorus' in dataset_name:
+    file_output = 'bosphorus'
+else:
+    file_output = 'dataset'
+
+file_output = file_output + '_LDA.h5'
+
+
+
+with h5py.File(file_output, 'w') as dataset: 
+    for split in X.keys():
+        dataset.create_dataset(f'X_{split}', data=X[split])
+        dataset.create_dataset(f'y_{split}', data=y[split])
+
+del X, y
+
+
+print("Loading data with LDA and SMOTE...")
+
+X, y = load_data('', dataset_name, use_pca=False, use_lda=True, use_smote=True)
+if 'CK+' in dataset_name:
+    file_output = 'ckplus' 
+elif 'RAFDB' in dataset_name:
+    file_output = 'rafdb' 
+elif 'FERP' in dataset_name:
+    file_output = 'ferp'
+elif 'JAFFE' in dataset_name:
+    file_output = 'jaffe'
+elif 'Bosphorus' in dataset_name:
+    file_output = 'bosphorus'
+else:
+    file_output = 'dataset'
+
+file_output = file_output + '_LDA_SMOTE.h5'
+
+
+
+with h5py.File(file_output, 'w') as dataset: 
+    for split in X.keys():
+        dataset.create_dataset(f'X_{split}', data=X[split])
+        dataset.create_dataset(f'y_{split}', data=y[split])
+
+del X, y
+
+
+# print("Loading data with PCA, LDA and SMOTE...")
+
+# X, y = load_data('', dataset_name, use_pca=True, use_lda=True, use_smote=True)
+# if 'CK+' in dataset_name:
+#     file_output = 'ckplus' 
+# elif 'RAFDB' in dataset_name:
+#     file_output = 'rafdb' 
+# elif 'FERP' in dataset_name:
+#     file_output = 'ferp'
+# elif 'JAFFE' in dataset_name:
+#     file_output = 'jaffe'
+# elif 'Bosphorus' in dataset_name:
+#     file_output = 'bosphorus'
+# else:
+#     file_output = 'dataset'
+
+# file_output = file_output + '_PCA_LDA_SMOTE.h5'
+
+
+
+# with h5py.File(file_output, 'w') as dataset: 
+#     for split in X.keys():
+#         dataset.create_dataset(f'X_{split}', data=X[split])
+#         dataset.create_dataset(f'y_{split}', data=y[split])
+
+# del X, y
+
+# print("Loading data with PCA and LDA...")
+
+# X, y = load_data('', dataset_name, use_pca=True, use_lda=True, use_smote=False)
+# if 'CK+' in dataset_name:
+#     file_output = 'ckplus' 
+# elif 'RAFDB' in dataset_name:
+#     file_output = 'rafdb' 
+# elif 'FERP' in dataset_name:
+#     file_output = 'ferp'
+# elif 'JAFFE' in dataset_name:
+#     file_output = 'jaffe'
+# elif 'Bosphorus' in dataset_name:
+#     file_output = 'bosphorus'
+# else:
+#     file_output = 'dataset'
+
+# file_output = file_output + '_PCA_LDA.h5'
+
+
+
+# with h5py.File(file_output, 'w') as dataset: 
+#     for split in X.keys():
+#         dataset.create_dataset(f'X_{split}', data=X[split])
+#         dataset.create_dataset(f'y_{split}', data=y[split])
+
+# del X, y
+
+
+# print("Loading data with PCA and SMOTE...")
+
+# X, y = load_data('', dataset_name, use_pca=True, use_lda=False, use_smote=True)
+# if 'CK+' in dataset_name:
+#     file_output = 'ckplus' 
+# elif 'RAFDB' in dataset_name:
+#     file_output = 'rafdb' 
+# elif 'FERP' in dataset_name:
+#     file_output = 'ferp'
+# elif 'JAFFE' in dataset_name:
+#     file_output = 'jaffe'
+# elif 'Bosphorus' in dataset_name:
+#     file_output = 'bosphorus'
+# else:
+#     file_output = 'dataset'
+
+# file_output = file_output + '_PCA_SMOTE.h5'
+
+
+
+# with h5py.File(file_output, 'w') as dataset: 
+#     for split in X.keys():
+#         dataset.create_dataset(f'X_{split}', data=X[split])
+#         dataset.create_dataset(f'y_{split}', data=y[split])
+
+# del X, y
+
+# print("Loading data with PCA...")
+
+# X, y = load_data('', dataset_name, use_pca=True, use_lda=False, use_smote=False)
+# if 'CK+' in dataset_name:
+#     file_output = 'ckplus' 
+# elif 'RAFDB' in dataset_name:
+#     file_output = 'rafdb' 
+# elif 'FERP' in dataset_name:
+#     file_output = 'ferp'
+# elif 'JAFFE' in dataset_name:
+#     file_output = 'jaffe'
+# elif 'Bosphorus' in dataset_name:
+#     file_output = 'bosphorus'
+# else:
+#     file_output = 'dataset'
+
+# file_output = file_output + '_PCA.h5'
+
+
+
+# with h5py.File(file_output, 'w') as dataset: 
+#     for split in X.keys():
+#         dataset.create_dataset(f'X_{split}', data=X[split])
+#         dataset.create_dataset(f'y_{split}', data=y[split])
+
+# del X, y
+
+
+
