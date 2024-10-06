@@ -334,89 +334,89 @@ with h5py.File(file_output, 'w') as dataset:
 
 del X, y
 
-print("Loading data with SMOTE...")
+# print("Loading data with SMOTE...")
 
-X, y = load_data('', dataset_name, use_pca=False, use_lda=False, use_smote=True)
-if 'CK+' in dataset_name:
-    file_output = 'ckplus' 
-elif 'RAFDB' in dataset_name:
-    file_output = 'rafdb' 
-elif 'FERP' in dataset_name:
-    file_output = 'ferp'
-elif 'JAFFE' in dataset_name:
-    file_output = 'jaffe'
-elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus'
-else:
-    file_output = 'dataset'
+# X, y = load_data('', dataset_name, use_pca=False, use_lda=False, use_smote=True)
+# if 'CK+' in dataset_name:
+#     file_output = 'ckplus' 
+# elif 'RAFDB' in dataset_name:
+#     file_output = 'rafdb' 
+# elif 'FERP' in dataset_name:
+#     file_output = 'ferp'
+# elif 'JAFFE' in dataset_name:
+#     file_output = 'jaffe'
+# elif 'Bosphorus' in dataset_name:
+#     file_output = 'bosphorus'
+# else:
+#     file_output = 'dataset'
 
-file_output = file_output + '_SMOTE.h5'
-
-
-
-with h5py.File(file_output, 'w') as dataset: 
-    for split in X.keys():
-        dataset.create_dataset(f'X_{split}', data=X[split])
-        dataset.create_dataset(f'y_{split}', data=y[split])
-
-del X, y
-
-
-print("Loading data with LDA...")
-
-
-X, y = load_data('', dataset_name, use_pca=False, use_lda=True, use_smote=False)
-if 'CK+' in dataset_name:
-    file_output = 'ckplus' 
-elif 'RAFDB' in dataset_name:
-    file_output = 'rafdb' 
-elif 'FERP' in dataset_name:
-    file_output = 'ferp'
-elif 'JAFFE' in dataset_name:
-    file_output = 'jaffe'
-elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus'
-else:
-    file_output = 'dataset'
-
-file_output = file_output + '_LDA.h5'
+# file_output = file_output + '_SMOTE.h5'
 
 
 
-with h5py.File(file_output, 'w') as dataset: 
-    for split in X.keys():
-        dataset.create_dataset(f'X_{split}', data=X[split])
-        dataset.create_dataset(f'y_{split}', data=y[split])
+# with h5py.File(file_output, 'w') as dataset: 
+#     for split in X.keys():
+#         dataset.create_dataset(f'X_{split}', data=X[split])
+#         dataset.create_dataset(f'y_{split}', data=y[split])
 
-del X, y
-
-
-print("Loading data with LDA and SMOTE...")
-
-X, y = load_data('', dataset_name, use_pca=False, use_lda=True, use_smote=True)
-if 'CK+' in dataset_name:
-    file_output = 'ckplus' 
-elif 'RAFDB' in dataset_name:
-    file_output = 'rafdb' 
-elif 'FERP' in dataset_name:
-    file_output = 'ferp'
-elif 'JAFFE' in dataset_name:
-    file_output = 'jaffe'
-elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus'
-else:
-    file_output = 'dataset'
-
-file_output = file_output + '_LDA_SMOTE.h5'
+# del X, y
 
 
+# print("Loading data with LDA...")
 
-with h5py.File(file_output, 'w') as dataset: 
-    for split in X.keys():
-        dataset.create_dataset(f'X_{split}', data=X[split])
-        dataset.create_dataset(f'y_{split}', data=y[split])
 
-del X, y
+# X, y = load_data('', dataset_name, use_pca=False, use_lda=True, use_smote=False)
+# if 'CK+' in dataset_name:
+#     file_output = 'ckplus' 
+# elif 'RAFDB' in dataset_name:
+#     file_output = 'rafdb' 
+# elif 'FERP' in dataset_name:
+#     file_output = 'ferp'
+# elif 'JAFFE' in dataset_name:
+#     file_output = 'jaffe'
+# elif 'Bosphorus' in dataset_name:
+#     file_output = 'bosphorus'
+# else:
+#     file_output = 'dataset'
+
+# file_output = file_output + '_LDA.h5'
+
+
+
+# with h5py.File(file_output, 'w') as dataset: 
+#     for split in X.keys():
+#         dataset.create_dataset(f'X_{split}', data=X[split])
+#         dataset.create_dataset(f'y_{split}', data=y[split])
+
+# del X, y
+
+
+# print("Loading data with LDA and SMOTE...")
+
+# X, y = load_data('', dataset_name, use_pca=False, use_lda=True, use_smote=True)
+# if 'CK+' in dataset_name:
+#     file_output = 'ckplus' 
+# elif 'RAFDB' in dataset_name:
+#     file_output = 'rafdb' 
+# elif 'FERP' in dataset_name:
+#     file_output = 'ferp'
+# elif 'JAFFE' in dataset_name:
+#     file_output = 'jaffe'
+# elif 'Bosphorus' in dataset_name:
+#     file_output = 'bosphorus'
+# else:
+#     file_output = 'dataset'
+
+# file_output = file_output + '_LDA_SMOTE.h5'
+
+
+
+# with h5py.File(file_output, 'w') as dataset: 
+#     for split in X.keys():
+#         dataset.create_dataset(f'X_{split}', data=X[split])
+#         dataset.create_dataset(f'y_{split}', data=y[split])
+
+# del X, y
 
 
 # print("Loading data with PCA, LDA and SMOTE...")
