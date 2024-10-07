@@ -165,6 +165,7 @@ print("Shape of test_label: {}".format(y_test.shape))
 # I pesi delle classi vengono poi convertiti in un dizionario tramite dict(enumerate(class_weights)). 
 # Questo è utile per bilanciare l'influenza delle classi durante l'addestramento del modello.
 
+
 class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
 class_weights = dict(enumerate(class_weights))
 
@@ -176,23 +177,17 @@ class_weights = dict(enumerate(class_weights))
 # contrasto casuale. La funzione preprocess_input di MobileNet viene utilizzata per pre-processare i dati di input.
 
 input_layer = tf.keras.Input(shape=IMG_SHAPE, name='universal_input')
-# Nuova dimensione delle features dopo LDA
-if 'prova' in file_output:        
-    new_feature_dim = X_train.shape[1]
-    sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
-    data_augmentation = tf.keras.Sequential([
-            tf.keras.layers.RandomFlip(mode='horizontal'),
-            tf.keras.layers.RandomRotation(0.2),
-            tf.keras.layers.RandomContrast(factor=0.3),
-            tf.keras.layers.Dense(units=64, input_dim=new_feature_dim, activation='relu'),
-        ], name="augmentation")
-else:
-    sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
-    data_augmentation = tf.keras.Sequential([
-            tf.keras.layers.RandomFlip(mode='horizontal'),
-            tf.keras.layers.RandomRotation(0.2),
-            tf.keras.layers.RandomContrast(factor=0.3)
-        ], name="augmentation")
+X_train = X_train.reshape(X_train.shape[0], 120, 120, 3)
+X_valid = X_valid.reshape(X_valid.shape[0], 120, 120, 3)
+X_test = X_test.reshape(X_test.shape[0], 120, 120, 3)
+print("Shape of train_sample: {}".format(X_train.shape))
+sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
+data_augmentation = tf.keras.Sequential([
+        tf.keras.layers.RandomFlip(mode='horizontal'),
+        tf.keras.layers.RandomRotation(0.2),
+        tf.keras.layers.RandomContrast(factor=0.3)
+    ], name="augmentation")
+    
 preprocess_input = tf.keras.applications.mobilenet.preprocess_input
 
 # Il backbone del modello è MobileNet, pre-addestrato su ImageNet, con i pesi congelati per evitare l'aggiornamento durante l'addestramento iniziale. 
@@ -259,7 +254,7 @@ pre_classification = tf.keras.Sequential([
     tf.keras.layers.Dropout(dropout_rate)  # Aggiungi dropout
 ], name='pre_classification')
 
-prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", name='classification_head')
+prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="softmax", name='classification_head')
 
 ############################### MIO CODICE ########################################
 inputs = input_layer
@@ -369,7 +364,7 @@ early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy', m
 scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
 
 # Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints/LDA_SMOTE", dataset_name)
+checkpoint_dir = os.path.join("checkpoints/PROVA", dataset_name)
 
 
 # Callback per salvare i pesi del modello ogni 20 epoche
@@ -400,7 +395,7 @@ history_finetune = model.fit(
 test_loss, test_acc = model.evaluate(X_test, y_test)
 
 # Create directory for saving the final model
-final_model_dir = os.path.join("final_models/LDA_SMOTE", dataset_name)
+final_model_dir = os.path.join("final_models/PROVA", dataset_name)
 
 # Creazione della directory unica per i risultati
 base_dir = final_model_dir
@@ -433,7 +428,7 @@ accuracy = correct_predictions / len(y_test)
 print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
 # Create directory for saving plots
-results_dir = os.path.join("results/LDA_SMOTE", dataset_name)
+results_dir = os.path.join("results/PROVA", dataset_name)
 
 # Calcola la matrice di confusione
 cm = confusion_matrix(y_test, y_pred)
