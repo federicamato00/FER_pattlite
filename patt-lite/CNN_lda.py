@@ -1,4 +1,3 @@
-import h5py
 import datetime
 import numpy as np
 import tensorflow as tf
@@ -60,8 +59,8 @@ BATCH_SIZE = 8
 
 TRAIN_EPOCH = 100
 TRAIN_LR = best_hps['learning_rate']
-TRAIN_ES_PATIENCE = 5
-TRAIN_LR_PATIENCE = 3
+TRAIN_ES_PATIENCE = 10
+TRAIN_LR_PATIENCE = 10
 TRAIN_MIN_LR = 1e-6
 TRAIN_DROPOUT = best_hps['train_dropout']
 
@@ -70,7 +69,7 @@ FT_LR = best_hps_ft['ft_learning_rate']
 FT_LR_DECAY_STEP = 80.0
 FT_LR_DECAY_RATE = 0.5
 
-FT_ES_PATIENCE = 20
+FT_ES_PATIENCE = 40
 FT_DROPOUT = best_hps['train_dropout']
 dropout_rate = best_hps['dropout_rate']
 
@@ -103,13 +102,14 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe.h5'
 elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus_prova.h5'
+    file_output = 'bosphorus_SMOTE.h5'
 elif 'BU_3DFE' in dataset_name:
     file_output = 'bu_3dfe.h5'
 else:
     file_output = 'dataset.h5'
 
-with h5py.File(file_output, 'r') as f:
+name_file_path = os.path.join("datasets",dataset_name, file_output)
+with h5py.File(name_file_path, 'r') as f:
     X_train = np.array(f['X_train'])
     y_train = np.array(f['y_train'])
     X_valid = np.array(f['X_val'])
@@ -139,10 +139,12 @@ class_weights = dict(enumerate(class_weights))
 input_layer = tf.keras.Input(shape=IMG_SHAPE, name='universal_input')
 sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
 data_augmentation = tf.keras.Sequential([
-        tf.keras.layers.RandomFlip(mode='horizontal'),
-        tf.keras.layers.RandomRotation(0.2),
-        tf.keras.layers.RandomContrast(factor=0.3)
-    ], name="augmentation")
+    tf.keras.layers.RandomFlip(mode='horizontal'),
+    tf.keras.layers.RandomRotation(0.2),
+    tf.keras.layers.RandomContrast(factor=0.3),
+    tf.keras.layers.RandomZoom(height_factor=0.2, width_factor=0.2),
+    tf.keras.layers.RandomTranslation(height_factor=0.2, width_factor=0.2)
+], name="augmentation")
 preprocess_input = tf.keras.applications.mobilenet.preprocess_input
 
 backbone = tf.keras.applications.mobilenet.MobileNet(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
@@ -153,18 +155,22 @@ self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
 
 patch_extraction = tf.keras.Sequential([
     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
+    tf.keras.layers.BatchNormalization(),
+    tf.keras.layers.Dropout(0.5),
     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
-    tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
+    tf.keras.layers.BatchNormalization(),
+    tf.keras.layers.Dropout(0.5),
+    tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
 ], name='patch_extraction')
 
 global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name='gap')
 pre_classification = tf.keras.Sequential([
     tf.keras.layers.Dense(best_hps['units'], activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])), 
     tf.keras.layers.BatchNormalization(),  
-    tf.keras.layers.Dropout(dropout_rate)
+    tf.keras.layers.Dropout(0.5)
 ], name='pre_classification')
 
-prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="sigmoid", name='classification_head')
+prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="softmax", name='classification_head')
 
 # Estrai le feature dal modello fino al livello di estrazione delle patch
 feature_extractor = tf.keras.Model(inputs=input_layer, outputs=patch_extraction(base_model(preprocess_input(data_augmentation(sample_resizing(input_layer))))))
@@ -191,9 +197,9 @@ model = tf.keras.Model(inputs, outputs, name='lda_model')
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=TRAIN_LR, global_clipnorm=3.0), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
 # Training Procedure
-early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=TRAIN_ES_PATIENCE, min_delta=ES_LR_MIN_DELTA, restore_best_weights=True)
-learning_rate_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_accuracy', patience=TRAIN_LR_PATIENCE, verbose=0, min_delta=ES_LR_MIN_DELTA, min_lr=TRAIN_MIN_LR)
-history = model.fit(X_train_lda, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid_lda, y_valid), verbose=0, 
+early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', patience=10, min_delta=0.001, restore_best_weights=True)
+learning_rate_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_loss', patience=5, verbose=1, min_delta=0.001, min_lr=1e-6)
+history = model.fit(X_train_lda, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid_lda, y_valid), verbose=1, 
                     class_weight=class_weights, callbacks=[early_stopping_callback, learning_rate_callback])
 test_loss, test_acc = model.evaluate(X_test_lda, y_test)
 
@@ -237,16 +243,14 @@ def schedule(epoch, lr):
 # Definisci i callback
 log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
-early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy', min_delta=ES_LR_MIN_DELTA, patience=FT_ES_PATIENCE, restore_best_weights=True)
+early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_loss', min_delta=0.001, patience=10, restore_best_weights=True)
 scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
 
 # Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints/noLDA", dataset_name)
-os.makedirs(checkpoint_dir, exist_ok=True)
-checkpoint_path = os.path.join(checkpoint_dir, "cp-{epoch:04d}.weights.h5")
+checkpoint_dir = os.path.join("checkpoints/LDA_2", dataset_name)
 
 checkpoint_callback = ModelCheckpoint(
-    filepath='model_weights_epoch_{epoch:02d}.weights.h5',
+    filepath=os.path.join(checkpoint_dir, 'model_weights_epoch_{epoch:02d}.weights.h5'),
     save_weights_only=True,
     save_best_only=True,
 )
@@ -268,8 +272,7 @@ history_finetune = model.fit(
 
 test_loss, test_acc = model.evaluate(X_test_lda, y_test)
 
-final_model_dir = os.path.join("final_models/noLDA", dataset_name)
-os.makedirs(final_model_dir, exist_ok=True)
+final_model_dir = os.path.join("final_models/LDA_2", dataset_name)
 
 base_dir = final_model_dir
 unique_dir = create_unique_directory(base_dir)
@@ -294,8 +297,7 @@ print(f"Numero di predizioni sbagliate: {incorrect_predictions}")
 accuracy = correct_predictions / len(y_test)
 print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
-results_dir = os.path.join("results/noLDA", dataset_name)
-os.makedirs(results_dir, exist_ok=True)
+results_dir = os.path.join("results/LDA_2", dataset_name)
 
 cm = confusion_matrix(y_test, y_pred)
 
@@ -322,7 +324,6 @@ unique_dir = create_unique_directory(base_dir)
 
 plt.savefig(os.path.join(unique_dir, 'confusion_matrix.png'))
 plt.close()
-
 history = history_finetune.history
 
 train_accuracy = history['accuracy']

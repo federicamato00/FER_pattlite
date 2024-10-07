@@ -127,7 +127,7 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe.h5'
 elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus_prova.h5'
+    file_output = 'bosphorus_SMOTE.h5'
 elif 'BU_3DFE' in dataset_name:
     file_output = 'bu_3dfe.h5'
 else:
@@ -364,7 +364,7 @@ early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy', m
 scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
 
 # Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints/PROVA", dataset_name)
+checkpoint_dir = os.path.join("checkpoints/SMOTE", dataset_name)
 
 
 # Callback per salvare i pesi del modello ogni 20 epoche
@@ -395,7 +395,7 @@ history_finetune = model.fit(
 test_loss, test_acc = model.evaluate(X_test, y_test)
 
 # Create directory for saving the final model
-final_model_dir = os.path.join("final_models/PROVA", dataset_name)
+final_model_dir = os.path.join("final_models/SMOTE", dataset_name)
 
 # Creazione della directory unica per i risultati
 base_dir = final_model_dir
@@ -428,7 +428,7 @@ accuracy = correct_predictions / len(y_test)
 print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
 # Create directory for saving plots
-results_dir = os.path.join("results/PROVA", dataset_name)
+results_dir = os.path.join("results/SMOTE", dataset_name)
 
 # Calcola la matrice di confusione
 cm = confusion_matrix(y_test, y_pred)
