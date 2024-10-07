@@ -127,7 +127,7 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe.h5'
 elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus_prova.h5'
+    file_output = 'bosphorus_LDA_SMOTE.h5'
 elif 'BU_3DFE' in dataset_name:
     file_output = 'bu_3dfe.h5'
 else:
@@ -356,14 +356,13 @@ early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy', m
 scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
 
 # Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints", dataset_name)
-os.makedirs(checkpoint_dir, exist_ok=True)
-checkpoint_path = os.path.join(checkpoint_dir, "cp-{epoch:04d}.weights.h5")
+checkpoint_dir = os.path.join("checkpoints/bosphorus_LDA_SMOTE", dataset_name)
+
 
 # Callback per salvare i pesi del modello ogni 20 epoche
 
 checkpoint_callback = ModelCheckpoint(
-    filepath='model_weights_epoch_{epoch:02d}.weights.h5',  # Percorso del file di salvataggio
+    filepath=os.path.join(checkpoint_dir,'model_weights_epoch_{epoch:02d}.weights.h5'),  # Percorso del file di salvataggio
     save_weights_only=True,  # Salva solo i pesi del modello
     save_best_only=True,  # Salva solo il miglior modello
 
@@ -388,8 +387,7 @@ history_finetune = model.fit(
 test_loss, test_acc = model.evaluate(X_test, y_test)
 
 # Create directory for saving the final model
-final_model_dir = os.path.join("final_models", dataset_name)
-os.makedirs(final_model_dir, exist_ok=True)
+final_model_dir = os.path.join("final_models/bosphorus_LDA_SMOTE", dataset_name)
 
 # Creazione della directory unica per i risultati
 base_dir = final_model_dir
@@ -422,8 +420,7 @@ accuracy = correct_predictions / len(y_test)
 print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
 # Create directory for saving plots
-results_dir = os.path.join("results", dataset_name)
-os.makedirs(results_dir, exist_ok=True)
+results_dir = os.path.join("results/bosphorus_LDA_SMOTE", dataset_name)
 
 # Calcola la matrice di confusione
 cm = confusion_matrix(y_test, y_pred)
@@ -484,8 +481,6 @@ plt.xlabel('Epochs')
 plt.ylabel('Loss')
 plt.legend()
 plt.title('Training and Validation Loss')
-
-
 
 
 plt.savefig(os.path.join(unique_dir, 'training_validation_plots.png'))
