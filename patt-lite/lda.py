@@ -56,7 +56,7 @@ def load_data(
         classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
     PATH = os.path.join(path_prefix, dataset_name)
-    path_distribution = os.path.join('dataset_distribution', dataset_name)
+    path_distribution = os.path.join('dataset_distribution','prova', dataset_name)
     if dataset_name == 'CK+':
         for classes in os.listdir(PATH):
             if classes != '.DS_Store':
