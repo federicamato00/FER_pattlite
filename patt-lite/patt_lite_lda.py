@@ -82,7 +82,7 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe.h5'
 elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus_prova.h5'
+    file_output = 'bosphorus_SMOTE.h5'
 elif 'BU_3DFE' in dataset_name:
     file_output = 'bu_3dfe.h5'
 else:
@@ -141,13 +141,16 @@ x = global_average_layer(x)
 
 # Appiattisci le caratteristiche per LDA
 features = tf.keras.layers.Flatten()(x)
+print("Shape delle caratteristiche appiattite:", features.shape)
 
 # Applica LDA
 lda = LDA(n_components=NUM_CLASSES - 1)
 features_lda = lda.fit_transform(features.numpy(), y_train)
+print("Shape delle caratteristiche LDA:", features_lda.shape)
 
 # Converti le caratteristiche LDA in un tensore TensorFlow
 features_lda = tf.convert_to_tensor(features_lda, dtype=tf.float32)
+print("Shape delle caratteristiche LDA come tensore:", features_lda.shape)
 
 # Livelli di classificazione
 pre_classification = tf.keras.Sequential([
@@ -160,7 +163,9 @@ prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="softmax", name
 
 # Costruzione del modello finale
 x = pre_classification(features_lda)
+print("Shape dopo pre_classification:", x.shape)
 outputs = prediction_layer(x)
+print("Shape dell'output finale:", outputs.shape)
 
 model = tf.keras.Model(inputs, outputs, name='lda-cnn')
 

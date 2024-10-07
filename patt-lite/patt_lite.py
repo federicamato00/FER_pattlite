@@ -133,8 +133,9 @@ elif 'BU_3DFE' in dataset_name:
 else:
     file_output = 'dataset.h5'
 
+name_file_path = os.path.join('datasets', dataset_name,file_output)
 # Supponiamo che i tuoi dati siano memorizzati in un file HDF5 chiamato 'data.h5'
-with h5py.File(file_output, 'r') as f:
+with h5py.File(name_file_path, 'r') as f:
     X_train = np.array(f['X_train'])
     y_train = np.array(f['y_train'])
     X_valid = np.array(f['X_val'])
@@ -512,7 +513,10 @@ params = {
     "dropout_rate": dropout_rate,
     "ES_LR_MIN_DELTA": ES_LR_MIN_DELTA,
     "pre_classification": pre_classification.get_config(),
-    "patch_extraction": patch_extraction.get_config()
+    "patch_extraction": patch_extraction.get_config(),
+    "accuracy test set": test_acc,
+    "accuracy train set": train_accuracy[-1],
+    "accuracy validation set": val_accuracy[-1],
 }
 
 save_parameters(params, unique_dir)
