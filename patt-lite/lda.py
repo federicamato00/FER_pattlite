@@ -26,6 +26,7 @@ def create_scatter_plot(X, y, classNames, title, path, use_lda=False):
     plt.savefig(path)
     plt.close()
 
+
 def apply_lda(X, y):
     lda = LDA(n_components=2)
     X_lda = lda.fit_transform(X.reshape((X.shape[0], -1)), y)
@@ -151,6 +152,9 @@ def load_data(
     
     # Apply LDA
     X_lda = apply_lda(X, y)
+    
+    
+
     
     # Visualizza la distribuzione delle classi dopo LDA
     plt.figure(figsize=(10, 5))

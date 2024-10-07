@@ -127,13 +127,13 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe.h5'
 elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus_LDA_SMOTE.h5'
+    file_output = 'bosphorus_prova.h5'
 elif 'BU_3DFE' in dataset_name:
     file_output = 'bu_3dfe.h5'
 else:
     file_output = 'dataset.h5'
 
-name_file_path = os.path.join('datasets', dataset_name, file_output)
+name_file_path = os.path.join('datasets', dataset_name,file_output)
 # Supponiamo che i tuoi dati siano memorizzati in un file HDF5 chiamato 'data.h5'
 with h5py.File(name_file_path, 'r') as f:
     X_train = np.array(f['X_train'])
@@ -176,12 +176,23 @@ class_weights = dict(enumerate(class_weights))
 # contrasto casuale. La funzione preprocess_input di MobileNet viene utilizzata per pre-processare i dati di input.
 
 input_layer = tf.keras.Input(shape=IMG_SHAPE, name='universal_input')
-sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
-data_augmentation = tf.keras.Sequential([
-        tf.keras.layers.RandomFlip(mode='horizontal'),
-        tf.keras.layers.RandomRotation(0.2),
-        tf.keras.layers.RandomContrast(factor=0.3)
-    ], name="augmentation")
+# Nuova dimensione delle features dopo LDA
+if 'prova' in file_output:        
+    new_feature_dim = X_train.shape[1]
+    sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
+    data_augmentation = tf.keras.Sequential([
+            tf.keras.layers.RandomFlip(mode='horizontal'),
+            tf.keras.layers.RandomRotation(0.2),
+            tf.keras.layers.RandomContrast(factor=0.3),
+            tf.keras.layers.Dense(units=64, input_dim=new_feature_dim, activation='relu'),
+        ], name="augmentation")
+else:
+    sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
+    data_augmentation = tf.keras.Sequential([
+            tf.keras.layers.RandomFlip(mode='horizontal'),
+            tf.keras.layers.RandomRotation(0.2),
+            tf.keras.layers.RandomContrast(factor=0.3)
+        ], name="augmentation")
 preprocess_input = tf.keras.applications.mobilenet.preprocess_input
 
 # Il backbone del modello è MobileNet, pre-addestrato su ImageNet, con i pesi congelati per evitare l'aggiornamento durante l'addestramento iniziale. 
@@ -218,6 +229,7 @@ self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
 # accuracy = 80.33% su test set
 
 patch_extraction = tf.keras.Sequential([
+    
     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
 
     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
