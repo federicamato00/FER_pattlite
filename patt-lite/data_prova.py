@@ -476,32 +476,32 @@ del X, y
 # del X, y
 
 
-print("Loading data with PCA and SMOTE...")
+# print("Loading data with PCA and SMOTE...")
 
-X, y = load_data('', dataset_name, use_pca=True, use_lda=False, use_smote=True)
-if 'CK+' in dataset_name:
-    file_output = 'ckplus' 
-elif 'RAFDB' in dataset_name:
-    file_output = 'rafdb' 
-elif 'FERP' in dataset_name:
-    file_output = 'ferp'
-elif 'JAFFE' in dataset_name:
-    file_output = 'jaffe'
-elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus'
-else:
-    file_output = 'dataset'
+# X, y = load_data('', dataset_name, use_pca=True, use_lda=False, use_smote=True)
+# if 'CK+' in dataset_name:
+#     file_output = 'ckplus' 
+# elif 'RAFDB' in dataset_name:
+#     file_output = 'rafdb' 
+# elif 'FERP' in dataset_name:
+#     file_output = 'ferp'
+# elif 'JAFFE' in dataset_name:
+#     file_output = 'jaffe'
+# elif 'Bosphorus' in dataset_name:
+#     file_output = 'bosphorus'
+# else:
+#     file_output = 'dataset'
 
-file_output = file_output + '_PCA_SMOTE.h5'
+# file_output = file_output + '_PCA_SMOTE.h5'
 
-save_path = os.path.join('datasets', dataset_name, file_output)
+# save_path = os.path.join('datasets', dataset_name, file_output)
 
-with h5py.File(save_path, 'w') as dataset: 
-    for split in X.keys():
-        dataset.create_dataset(f'X_{split}', data=X[split])
-        dataset.create_dataset(f'y_{split}', data=y[split])
+# with h5py.File(save_path, 'w') as dataset: 
+#     for split in X.keys():
+#         dataset.create_dataset(f'X_{split}', data=X[split])
+#         dataset.create_dataset(f'y_{split}', data=y[split])
 
-del X, y
+# del X, y
 
 # print("Loading data with PCA...")
 
