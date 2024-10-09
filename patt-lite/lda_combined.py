@@ -1,4 +1,6 @@
-import h5py
+
+
+# Grafici diimport h5py
 import datetime
 import numpy as np
 import tensorflow as tf
@@ -52,6 +54,15 @@ with open('best_finetune_hyperparameters.txt', 'r') as f:
             best_hps_ft[name] = int(float(value))
         else:
             best_hps_ft[name] = float(value)
+
+# Funzione per classificare le immagini difficili
+def classify_images(model, X, threshold=0.7):
+    y_pred_prob = model.predict(X)
+    y_pred = np.argmax(y_pred_prob, axis=1)
+    conf_scores = np.max(y_pred_prob, axis=1)
+    easy_indices = np.where(conf_scores >= threshold)[0]
+    hard_indices = np.where(conf_scores < threshold)[0]
+    return y_pred, easy_indices, hard_indices
 
 # Parametri
 NUM_CLASSES = 7
@@ -191,6 +202,7 @@ x = self_attention([x, x])
 x = SqueezeLayer(axis=1)(x)
 outputs = prediction_layer(x)
 
+print("Costruzione modello iniziale... ")
 initial_model = tf.keras.Model(inputs, outputs, name='initial_model')
 initial_model.compile(optimizer=keras.optimizers.Adam(learning_rate=TRAIN_LR, global_clipnorm=3.0), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
@@ -200,23 +212,19 @@ learning_rate_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_accur
 initial_model.fit(X_train, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid, y_valid), verbose=0, 
                   class_weight=class_weights, callbacks=[early_stopping_callback, learning_rate_callback])
 
-# Funzione per classificare le immagini difficili
-def classify_images(model, X, threshold=0.7):
-    y_pred_prob = model.predict(X)
-    y_pred = np.argmax(y_pred_prob, axis=1)
-    conf_scores = np.max(y_pred_prob, axis=1)
-    easy_indices = np.where(conf_scores >= threshold)[0]
-    hard_indices = np.where(conf_scores < threshold)[0]
-    return y_pred, easy_indices, hard_indices
 
+print("Ricerca delle immagini difficili... ")
 # Classifica le immagini di test
 y_pred, easy_indices, hard_indices = classify_images(initial_model, X_test)
 
+print(f"Numero di immagini difficili: {len(hard_indices)}")
+print("Processamento con LDA per le immagini difficili... ")
 # Processa le immagini difficili con LDA
 lda = LDA(n_components=NUM_CLASSES-1)
 X_train_lda = lda.fit_transform(X_train.reshape(X_train.shape[0], -1), y_train)
 X_test_hard_lda = lda.transform(X_test[hard_indices].reshape(len(hard_indices), -1))
 
+print("Addestramento di un modello semplice sulle caratteristiche LDA... ")
 # Addestra un modello semplice sulle caratteristiche LDA
 simple_model = keras.Sequential([
     keras.layers.InputLayer(input_shape=(X_train_lda.shape[1],)),
@@ -225,13 +233,19 @@ simple_model = keras.Sequential([
 simple_model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 simple_model.fit(X_train_lda, y_train, epochs=10, batch_size=BATCH_SIZE)
 
+
+print("Valutazione del modello semplice sulle immagini difficili... ")
 # Valuta il modello semplice sulle immagini difficili
 simple_model.evaluate(X_test_hard_lda, y_test[hard_indices])
 
-# Combina le caratteristiche LDA con le caratteristiche originali
-X_train_combined = np.concatenate([X_train.reshape(X_train.shape[0], -1), X_train_lda], axis=1)
-X_test_combined = np.concatenate([X_test.reshape(X_test.shape[0], -1), X_test_hard_lda], axis=1)
+print("Combinazione delle caratteristiche LDA con le caratteristiche originali... ")
 
+# Combina le caratteristiche LDA con le caratteristiche originali per le immagini difficili
+X_train_combined = np.concatenate([X_train.reshape(X_train.shape[0], -1), X_train_lda], axis=1)
+X_valid_combined = np.concatenate([X_valid.reshape(X_valid.shape[0], -1), lda.transform(X_valid.reshape(X_valid.shape[0], -1))], axis=1)
+X_test_combined = np.concatenate([X_test.reshape(X_test.shape[0], -1), lda.transform(X_test.reshape(X_test.shape[0], -1))], axis=1)
+
+print("Creazione di un modello combinato ... ")
 # Costruisci il modello di addestramento
 inputs = input_layer
 x = sample_resizing(inputs)
@@ -253,7 +267,7 @@ model.compile(optimizer=keras.optimizers.Adam(learning_rate=TRAIN_LR, global_cli
 # Addestramento del modello
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=TRAIN_ES_PATIENCE, min_delta=ES_LR_MIN_DELTA, restore_best_weights=True)
 learning_rate_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_accuracy', patience=TRAIN_LR_PATIENCE, verbose=0, min_delta=ES_LR_MIN_DELTA, min_lr=TRAIN_MIN_LR)
-history = model.fit(X_train_combined, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid, y_valid), verbose=0, 
+history = model.fit(X_train_combined, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid_combined, y_valid), verbose=0, 
                     class_weight=class_weights, callbacks=[early_stopping_callback, learning_rate_callback])
 test_loss, test_acc = model.evaluate(X_test_combined, y_test)
 
@@ -314,7 +328,7 @@ history_finetune = model.fit(
     X_train_combined, y_train, 
     epochs=FT_EPOCH, 
     batch_size=BATCH_SIZE, 
-    validation_data=(X_valid, y_valid), 
+    validation_data=(X_valid_combined, y_valid), 
     verbose=1, 
     initial_epoch=history.epoch[-TRAIN_ES_PATIENCE], 
     callbacks=[early_stopping_callback, scheduler_callback, tensorboard_callback, checkpoint_callback]
@@ -377,69 +391,4 @@ unique_dir = create_unique_directory(base_dir)
 plt.savefig(os.path.join(unique_dir, 'confusion_matrix.png'))
 plt.close()
 
-# Grafici di accuratezza e perdita
-history = history_finetune.history
-
-train_accuracy = history['accuracy']
-val_accuracy = history['val_accuracy']
-train_loss = history['loss']
-val_loss = history['val_loss']
-
-plt.figure(figsize=(12, 4))
-
-plt.subplot(1, 2, 1)
-plt.plot(train_accuracy, label='Training Accuracy')
-plt.plot(val_accuracy, label='Validation Accuracy')
-plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.title('Training and Validation Accuracy')
-
-plt.subplot(1, 2, 2)
-plt.plot(train_accuracy, label='Training Accuracy')
-plt.plot(val_accuracy, label='Validation Accuracy')
-plt.xlabel('Epochs')
-plt.ylabel('Accuracy')
-plt.legend()
-plt.title('Training and Validation Accuracy')
-
-plt.subplot(1, 2, 2)
-plt.plot(train_loss, label='Training Loss')
-plt.plot(val_loss, label='Validation Loss')
-plt.xlabel('Epochs')
-plt.ylabel('Loss')
-plt.legend()
-plt.title('Training and Validation Loss')
-
-plt.savefig(os.path.join(unique_dir, 'training_validation_plots.png'))
-plt.show()
-
-# Salva i parametri
-params = {
-    "NUM_CLASSES": NUM_CLASSES,
-    "IMG_SHAPE": IMG_SHAPE,
-    "BATCH_SIZE": BATCH_SIZE,
-    "TRAIN_EPOCH": TRAIN_EPOCH,
-    "TRAIN_LR": TRAIN_LR,
-    "TRAIN_ES_PATIENCE": TRAIN_ES_PATIENCE,
-    "TRAIN_LR_PATIENCE": TRAIN_LR_PATIENCE,
-    "TRAIN_MIN_LR": TRAIN_MIN_LR,
-    "TRAIN_DROPOUT": TRAIN_DROPOUT,
-    "FT_EPOCH": FT_EPOCH,
-    "FT_LR": FT_LR,
-    "FT_LR_DECAY_STEP": FT_LR_DECAY_STEP,
-    "FT_LR_DECAY_RATE": FT_LR_DECAY_RATE,
-    "FT_ES_PATIENCE": FT_ES_PATIENCE,
-    "FT_DROPOUT": FT_DROPOUT,
-    "dropout_rate": dropout_rate,
-    "ES_LR_MIN_DELTA": ES_LR_MIN_DELTA,
-    "pre_classification": pre_classification.get_config(),
-    "patch_extraction": patch_extraction.get_config(),
-    "accuracy test set": test_acc,
-    "accuracy train set": train_accuracy[-1],
-    "accuracy validation set": val_accuracy[-1],
-}
-
-save_parameters(params, unique_dir)
-print(f"Directory creata: {unique_dir}")
-print(f"Parametri salvati in: {os.path.join(unique_dir, 'parameters.txt')}")
+# Grafici di
