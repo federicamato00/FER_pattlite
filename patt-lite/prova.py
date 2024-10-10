@@ -13,7 +13,20 @@ from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.layers import Layer
 
+class SeparableConv2DWithReg(tf.keras.layers.Layer):
+    def __init__(self, filters, kernel_size, strides=(1, 1), padding='valid', activation=None, kernel_regularizer=None, **kwargs):
+        super(SeparableConv2DWithReg, self).__init__(**kwargs)
+        self.separable_conv = tf.keras.layers.SeparableConv2D(filters, kernel_size, strides=strides, padding=padding, activation=activation)
+        self.kernel_regularizer = kernel_regularizer
 
+    def call(self, inputs):
+        outputs = self.separable_conv(inputs)
+        if self.kernel_regularizer:
+            self.add_loss(self.kernel_regularizer(self.separable_conv.depthwise_kernel))
+            self.add_loss(self.kernel_regularizer(self.separable_conv.pointwise_kernel))
+        return outputs
+    
+    
 def plot_class_distribution(y_train, y_val, y_test, class_names):
     # Conta il numero di campioni per ciascuna classe in ogni set
     train_counts = np.bincount(y_train)
@@ -298,15 +311,20 @@ self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
 ########################## modello iniziale ######################################## 
 # accuracy = 80.33% su test set
 
-patch_extraction = tf.keras.Sequential([
+# patch_extraction = tf.keras.Sequential([
     
-    tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
+#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
 
-    tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
+#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
 
+#     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
+# ], name='patch_extraction')
+
+patch_extraction = tf.keras.Sequential([
+    SeparableConv2DWithReg(256, kernel_size=4, strides=4, padding='same', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
+    SeparableConv2DWithReg(256, kernel_size=2, strides=2, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
 ], name='patch_extraction')
-
 
 ########################## modello con dropout ma senza batch ######################
 
