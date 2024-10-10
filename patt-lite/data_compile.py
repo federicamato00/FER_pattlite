@@ -23,9 +23,10 @@ def load_data(
     elif 'Bosphorus' in dataset_name:
         classNames = ['anger', 'disgust', 'fear', 'happy', 'sadness', 'surprise','neutral']
     elif 'CK+' in dataset_name:
-        classNames = ['neutral', 'anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness']
+        classNames = ['neutral', 'anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness', 'surprise']
     else:
         classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
+        
 
     PATH = os.path.join(path_prefix, dataset_name)
     if dataset_name == 'CK+':
