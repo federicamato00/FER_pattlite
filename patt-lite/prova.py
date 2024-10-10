@@ -285,27 +285,27 @@ self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
 ####### con dropout e batch normalization prima di drop in patch extraction ########
 #accuracy =  su test set
 
-patch_extraction = tf.keras.Sequential([
-    tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
-    tf.keras.layers.BatchNormalization(),  
-    tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
-    tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
-    tf.keras.layers.BatchNormalization(),  
-    tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
-    tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
-], name='patch_extraction')
+# patch_extraction = tf.keras.Sequential([
+#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
+#     tf.keras.layers.BatchNormalization(),  
+#     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
+#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
+#     tf.keras.layers.BatchNormalization(),  
+#     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
+#     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
+# ], name='patch_extraction')
 
 ########################## modello iniziale ######################################## 
 # accuracy = 80.33% su test set
 
-# patch_extraction = tf.keras.Sequential([
+patch_extraction = tf.keras.Sequential([
     
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
+    tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
 
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
+    tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
 
-#     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
-# ], name='patch_extraction')
+    tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
+], name='patch_extraction')
 
 
 ########################## modello con dropout ma senza batch ######################
