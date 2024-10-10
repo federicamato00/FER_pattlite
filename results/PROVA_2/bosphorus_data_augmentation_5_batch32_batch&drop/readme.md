@@ -2,34 +2,34 @@
  
 Possiamo fare le seguenti osservazioni:
 
-## Grafico 1: [confusion_matrix](./bosphorus_data_augmentation_5_batch&Drop/confusion_matrix.png)
+## Grafico 1: [confusion_matrix](./bosphorus_data_augmentation_batch32_batch&drop/confusion_matrix.png)
 
 L'immagine mostra una **matrice di confusione**, uno strumento utilizzato nel machine learning per valutare le prestazioni di un modello di classificazione. Ecco una spiegazione dei risultati:
 
-- **Ottima precisione per la felicità**: Il modello ha identificato correttamente 43 istanze di felicità, dimostrando una forte capacità di riconoscere questa emozione.
-- **Confusione tra rabbia e tristezza**: Ci sono state alcune confusioni tra rabbia e tristezza, con 3 istanze di tristezza erroneamente classificate come rabbia.
-- **Buona performance generale**: La maggior parte delle etichette vere ha un alto numero di conteggi sulla diagonale, indicando classificazioni corrette.
-- **Possibili miglioramenti**: Potrebbe essere utile migliorare la distinzione tra emozioni come rabbia e tristezza, dove si sono verificati alcuni errori di classificazione.
+- **Ottima precisione per la felicità**: Il modello ha identificato correttamente 42 istanze di felicità, dimostrando una forte capacità di riconoscere questa emozione.
+- **Confusione tra emozioni**: Ci sono state alcune confusioni tra emozioni come rabbia e tristezza, con 5 istanze di tristezza erroneamente classificate come rabbia.
+- **Performance generale**: La maggior parte delle etichette vere ha un alto numero di conteggi sulla diagonale, indicando classificazioni corrette. Tuttavia, ci sono alcune classi come 'disgusto' che hanno meno predizioni corrette.
+- **Miglioramenti necessari**: Potrebbe essere utile migliorare la distinzione tra emozioni come rabbia e tristezza, e tra sorpresa e altre emozioni, dove si sono verificati alcuni errori di classificazione.
 
 
-## Grafico 2: [Training e Validation plots](./bosphorus_data_augmentation_5_batch&Drop/training_validation_plots.png)
+## Grafico 2: [Training e Validation plots](./bosphorus_data_augmentation_batch32_batch&drop/training_validation_plots.png)
 
 Ci sono due grafici:
 
-1. **Training and Validation Accuracy**: Entrambe le linee mostrano un trend crescente, indicando che il modello sta migliorando la sua accuratezza sia sui dati di training che di validazione. Tuttavia, la precisione di training è costantemente più alta rispetto a quella di validazione, suggerendo che il modello potrebbe essere leggermente sovra-addestrato.
+1. **Training and Validation Accuracy**: Entrambe le linee mostrano un trend crescente, indicando che il modello sta migliorando la sua accuratezza sia sui dati di training che di validazione. La precisione di training è leggermente più alta rispetto a quella di validazione, suggerendo un buon apprendimento con un lieve rischio di sovra-addestramento.
 
-2. **Training and Validation Loss**: Entrambe le linee mostrano un trend decrescente, il che è positivo. La perdita di training diminuisce più rapidamente rispetto alla perdita di validazione, il che potrebbe indicare che il modello sta imparando bene dai dati di training ma potrebbe non generalizzare altrettanto bene sui dati di validazione.
+2. **Training and Validation Loss**: Entrambe le linee mostrano un trend decrescente, il che è positivo. La perdita di training diminuisce più rapidamente rispetto alla perdita di validazione, indicando che il modello sta imparando bene dai dati di training ma potrebbe non generalizzare altrettanto bene sui dati di validazione.
 
-Questi grafici sono tipici di un buon processo di addestramento, ma potrebbero suggerire la necessità di tecniche di regolarizzazione per migliorare la generalizzazione.
+Questi grafici suggeriscono che il modello sta migliorando nel tempo e possono essere considerati un buon punto di partenza. Tuttavia, potrebbe essere utile implementare tecniche di regolarizzazione per migliorare ulteriormente la generalizzazione. 
 
-## [Parameters] (./borsphorus_data_augmentation_5_batch&Drop/parameters.txt)
-I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./bosphorus_data_augmentation_5_batch&Drop/parameters.txt). Per questa prova, si sono ottenuti i seguenti risultati:
-- accuracy test set: 89.00%
-- accuracy train set: 81.36%
-- accuracy validation set: 89.61
 
-In questo caso, il batch_size è impostato a 8
+## [Parameters] (./bbosphorus_data_augmentation_batch32_batch&drop/parameters.txt)
+I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./bosphorus_data_augmentation_batch32_batch&drop/parameters.txt). Per questa prova, si sono ottenuti i seguenti risultati:
+- accuracy test set: 87.10%
+- accuracy train set: 92.44%
+- accuracy validation set: 91.72%
 
+In questo caso, il BATCH_SIZE è stato impostato a 32
 Nella patch_extraction sono stati usati i seguenti parametri:
 patch_extraction = tf.keras.Sequential([
     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
