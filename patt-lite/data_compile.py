@@ -23,24 +23,57 @@ def load_data(
     elif 'Bosphorus' in dataset_name:
         classNames = ['anger', 'disgust', 'fear', 'happy', 'sadness', 'surprise','neutral']
     elif 'CK+' in dataset_name:
-        classNames = ['anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness', 'surprise']
+        classNames = ['neutral', 'anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness']
     else:
         classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
     PATH = os.path.join(path_prefix, dataset_name)
     if dataset_name == 'CK+':
-        for classes in os.listdir(PATH):
-            if classes != '.DS_Store':
-                class_path = os.path.join(PATH, classes)
-                class_numeric = classNames.index(classes)
+        emotion_path = os.path.join(PATH, 'Emotion')
+        frames_path = os.path.join(PATH, 'cohn-kanade-images')
+        for subject in os.listdir(emotion_path):
+            subject_path = os.path.join(emotion_path, subject)
+            if os.path.isdir(subject_path):
+                for session in os.listdir(subject_path):
+                    session_path = os.path.join(subject_path, session)
+                    if os.path.isdir(session_path):
+                        for file in os.listdir(session_path):
+                            jump = False
+                            if file.endswith('.txt'):
+                                file_path = os.path.join(session_path, file)
+                                if os.path.getsize(file_path) == 0:
+                                    jump = True
+                                    continue
+                                with open(file_path, 'r') as f:
+                                    emotion_label = int(float(f.readline().strip()))
+                                
+                                # Trova i frame corrispondenti nella cartella dei frames
+                                frames_subject_path = os.path.join(frames_path, subject)
+                                frames_session_path = os.path.join(frames_subject_path, session)
+                                if os.path.isdir(frames_session_path):
+                                    frames = sorted(os.listdir(frames_session_path))
+                                    if len(frames) > 2:
+                                        # Primo frame come "neutro"
+                                        first_frame_path = os.path.join(frames_session_path, frames[0])
+                                        
+                                        if first_frame_path.endswith('.png'):
+                                            image = cv2.imread(first_frame_path, cv2.IMREAD_COLOR)
+                                            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                                            image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
+                                            X.append(image)
+                                            y.append(classNames.index('neutral'))
+                                            # Ultimi due frame come emotion_label
+                                            if jump == False: 
+                                                for frame in frames[-2:]:
+                                                    frame_path = os.path.join(frames_session_path, frame)
+                                                    image = cv2.imread(frame_path, cv2.IMREAD_COLOR)
+                                                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                                                    image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
+                                                    X.append(image)
+                                                    y.append(emotion_label)
+                                            else:
+                                                jump = False
 
-                for sample in os.listdir(class_path):
-                    sample_path = os.path.join(class_path, sample)
-                    image = cv2.imread(sample_path, cv2.IMREAD_COLOR)
-                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                    image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
-                    X.append(image)
-                    y.append(class_numeric)
     elif dataset_name == 'Bosphorus':
         PATH = os.path.join(path_prefix, dataset_name, 'Bosphorus')
         for subject_folder in os.listdir(PATH):

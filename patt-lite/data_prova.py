@@ -39,6 +39,7 @@ def load_data(
 
     IMG_SIZE = 224 if 'RAFDB' in dataset_name else 120
 
+
     if 'RAFDB' in dataset_name:
         classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
     elif 'FERP' in dataset_name:
@@ -48,25 +49,57 @@ def load_data(
     elif 'Bosphorus' in dataset_name:
         classNames = ['anger', 'disgust', 'fear', 'happy', 'sadness', 'surprise','neutral']
     elif 'CK+' in dataset_name:
-        classNames = ['anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness', 'surprise']
+        classNames = ['neutral', 'anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness', 'surprise']
     else:
         classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
     PATH = os.path.join(path_prefix, dataset_name)
-    path_distribution = os.path.join('dataset_distribution/Bosphorus', dataset_name)
     if dataset_name == 'CK+':
-        for classes in os.listdir(PATH):
-            if classes != '.DS_Store':
-                class_path = os.path.join(PATH, classes)
-                class_numeric = classNames.index(classes)
+        emotion_path = os.path.join(PATH, 'Emotion')
+        frames_path = os.path.join(PATH, 'cohn-kanade-images')
+        for subject in os.listdir(emotion_path):
+            subject_path = os.path.join(emotion_path, subject)
+            if os.path.isdir(subject_path):
+                for session in os.listdir(subject_path):
+                    session_path = os.path.join(subject_path, session)
+                    if os.path.isdir(session_path):
+                        for file in os.listdir(session_path):
+                            jump = False
+                            if file.endswith('.txt'):
+                                file_path = os.path.join(session_path, file)
+                                if os.path.getsize(file_path) == 0:
+                                    jump = True
+                                    continue
+                                with open(file_path, 'r') as f:
+                                    emotion_label = int(float(f.readline().strip()))
+                                
+                                # Trova i frame corrispondenti nella cartella dei frames
+                                frames_subject_path = os.path.join(frames_path, subject)
+                                frames_session_path = os.path.join(frames_subject_path, session)
+                                if os.path.isdir(frames_session_path):
+                                    frames = sorted(os.listdir(frames_session_path))
+                                    if len(frames) > 2:
+                                        # Primo frame come "neutro"
+                                        first_frame_path = os.path.join(frames_session_path, frames[0])
+                                        
+                                        if first_frame_path.endswith('.png'):
+                                            image = cv2.imread(first_frame_path, cv2.IMREAD_COLOR)
+                                            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                                            image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
+                                            X.append(image)
+                                            y.append(classNames.index('neutral'))
+                                            # Ultimi due frame come emotion_label
+                                            if jump == False: 
+                                                for frame in frames[-2:]:
+                                                    frame_path = os.path.join(frames_session_path, frame)
+                                                    image = cv2.imread(frame_path, cv2.IMREAD_COLOR)
+                                                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                                                    image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
+                                                    X.append(image)
+                                                    y.append(emotion_label)
+                                            else:
+                                                jump = False
 
-                for sample in os.listdir(class_path):
-                    sample_path = os.path.join(class_path, sample)
-                    image = cv2.imread(sample_path, cv2.IMREAD_COLOR)
-                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                    image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
-                    X.append(image)
-                    y.append(class_numeric)
     elif dataset_name == 'Bosphorus':
         PATH = os.path.join(path_prefix, dataset_name, 'Bosphorus')
         for subject_folder in os.listdir(PATH):
@@ -100,13 +133,11 @@ def load_data(
     print(f"X shape: {X.shape}")
     print(f"y shape: {y.shape}")
     
+    path_distribution = get_unique_directory('dataset_distribution', dataset_name)
     # Creare le directory per salvare i dati e i grafici
     dataset_dir = get_unique_directory('datasets', dataset_name)
     if not os.path.exists(dataset_dir):
         os.makedirs(dataset_dir)
-
-    if not os.path.exists(path_distribution):
-        os.makedirs(path_distribution)
     
     # Visualizza la distribuzione delle classi prima di augmentation
     plt.figure(figsize=(10, 5))
@@ -114,6 +145,10 @@ def load_data(
     plt.title('Distribuzione delle classi')
     plt.xlabel('Classi')
     plt.ylabel('Numero di campioni')
+    if 'CK+' in dataset_name:
+        classNames = {emotion: idx for idx, emotion in enumerate(classNames)}
+        classNames = {idx: emotion for idx, emotion in enumerate(classNames)}
+    print(classNames)
     plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
     plt.savefig(os.path.join(path_distribution, 'distribution_dataset.png'))
     
@@ -134,7 +169,7 @@ def load_data(
             #     iaa.GaussianBlur(sigma=(0, 1.0))  # blur
             # ])
 
-        #     '''seconda prova, salvato in boss_data_augmentation_2.h5'''
+            '''seconda prova, salvato in boss_data_augmentation_2.h5'''
         #     augmentations = iaa.Sequential([
         #     iaa.Fliplr(0.5),  # flip orizzontale
         #     iaa.Affine(rotate=(-20, 20)),  # rotazione
@@ -204,30 +239,30 @@ def load_data(
             
         '''prova ad aumentare il numero di campioni per classe'''
         '''salvato in boss_data_augmentation_4.h5'''
-        # Aumenta ulteriormente il numero di dati per ogni classe
-        X_augmented, y_augmented = [], []
-        for class_idx in unique_classes:
-            class_images = X[y == class_idx]
-            class_labels = y[y == class_idx]
-            target_count = additional_images_per_class
-            augmented_images, augmented_labels = augment_images(class_images, class_labels, augmentations, target_count)
-            X_augmented.append(augmented_images)
-            y_augmented.append(augmented_labels)
+        # # Aumenta ulteriormente il numero di dati per ogni classe
+        # X_augmented, y_augmented = [], []
+        # for class_idx in unique_classes:
+        #     class_images = X[y == class_idx]
+        #     class_labels = y[y == class_idx]
+        #     target_count = additional_images_per_class
+        #     augmented_images, augmented_labels = augment_images(class_images, class_labels, augmentations, target_count)
+        #     X_augmented.append(augmented_images)
+        #     y_augmented.append(augmented_labels)
         
-        X_augmented = np.concatenate(X_augmented, axis=0)
-        y_augmented = np.concatenate(y_augmented, axis=0)
+        # X_augmented = np.concatenate(X_augmented, axis=0)
+        # y_augmented = np.concatenate(y_augmented, axis=0)
         
-        X = np.concatenate((X, X_augmented), axis=0)
-        y = np.concatenate((y, y_augmented), axis=0)
-        print("Ulteriore aumento del numero di campioni per classe completato.")
-        # Visualizza la distribuzione delle classi dopo ulteriore aumento
-        plt.figure(figsize=(10, 5))
-        plt.bar(np.unique(y), np.bincount(y))
-        plt.title('Distribuzione delle classi dopo ulteriore aumento')
-        plt.xlabel('Classi')
-        plt.ylabel('Numero di campioni')
-        plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
-        plt.savefig(os.path.join(path_distribution, 'dopo_ulteriore_aumento_2.png'))
+        # X = np.concatenate((X, X_augmented), axis=0)
+        # y = np.concatenate((y, y_augmented), axis=0)
+        # print("Ulteriore aumento del numero di campioni per classe completato.")
+        # # Visualizza la distribuzione delle classi dopo ulteriore aumento
+        # plt.figure(figsize=(10, 5))
+        # plt.bar(np.unique(y), np.bincount(y))
+        # plt.title('Distribuzione delle classi dopo ulteriore aumento')
+        # plt.xlabel('Classi')
+        # plt.ylabel('Numero di campioni')
+        # plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
+        # plt.savefig(os.path.join(path_distribution, 'dopo_ulteriore_aumento_2.png'))
    
 
     # Split the data into train, val, and test sets
@@ -237,12 +272,12 @@ def load_data(
     
     return {'train': X_train, 'val': X_val, 'test': X_test}, {'train': y_train, 'val': y_val, 'test': y_test}
 
-dataset_name='Bosphorus' # 'CK+', 'RAFDB', 'FERP', 'JAFFE', 'Bosphorus'
+dataset_name='CK+' # 'CK+', 'RAFDB', 'FERP', 'JAFFE', 'Bosphorus'
 
 print("Loading data...")
 X, y = load_data('', dataset_name, use_augmentation=True)
 if 'CK+' in dataset_name:
-    file_output = 'ckplus' 
+    file_output = 'ckplus_data_augmentation_5' 
 elif 'RAFDB' in dataset_name:
     file_output = 'rafdb' 
 elif 'FERP' in dataset_name:
@@ -250,17 +285,18 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe'
 elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus_data_augmentation_5'
+    file_output = 'bosphorus'
 else:
     file_output = 'dataset'
 
 file_output = file_output + '.h5'
 
-with h5py.File(file_output, 'w') as dataset: 
+file_path_save = os.path.join('datasets', dataset_name, file_output)
+with h5py.File(file_path_save, 'w') as dataset: 
     for split in X.keys():
         dataset.create_dataset(f'X_{split}', data=X[split])
         dataset.create_dataset(f'y_{split}', data=y[split])
 
 del X, y
 
-print(f"Dataset salvato in {file_output}")
+print(f"Dataset salvato in {file_path_save}")
