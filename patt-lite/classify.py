@@ -21,7 +21,7 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Conv2D, MaxPooling2D, Flatten, Dense, Layer
 
-def visualize_intermediate_steps(original, gray, equalized, blurred, normalized, processed):
+def visualize_intermediate_steps(original, gray, equalized, blurred, normalized, processed,save_path):
     fig, axes = plt.subplots(1, 6, figsize=(20, 5))
     axes[0].imshow(original)
     axes[0].set_title('Original Image')
@@ -50,8 +50,10 @@ def visualize_intermediate_steps(original, gray, equalized, blurred, normalized,
     axes[5].imshow(cv2.cvtColor(processed, cv2.COLOR_BGR2RGB))
     axes[5].set_title('Processed Image')
     axes[5].axis('off')
-
-    plt.savefig('preprocessing_example_5.png')
+    title_new = save_path.split('.')[0]
+    title_new = title_new+'.png'
+    plot_save_path = os.path.join('classify',dataset_name, title_new)
+    plt.savefig(plot_save_path)
     plt.show()
 
 def convert_to_gray(image):
@@ -215,9 +217,15 @@ dropout_rate = best_hps['dropout_rate']
 ES_LR_MIN_DELTA = 0.003 #quantità minima di cambiamento per considerare un miglioramento
 
 dataset_name='Bosphorus'
+# dataset_name='CK+'
+# dataset_name='BU_3DFE'
 
 if 'CK+' in dataset_name:
     file_output = 'ckplus.h5'
+    # file_output = 'ckplus_daia_augmentation_1.h5'
+    # file_output = 'ckplus_daia_augmentation_2.h5'
+    # file_output = 'ckplus_daia_augmentation_3.h5'
+    # file_output = 'ckplus_daia_augmentation_5.h5'
 elif 'RAFDB' in dataset_name:
     file_output = 'rafdb.h5'
 elif 'FERP' in dataset_name:
@@ -225,9 +233,18 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe.h5'
 elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus_data_augmentation_5.h5'
+    file_output = 'bosphorus.h5'
+    # file_output = 'bosphorus_daia_augmentation.h5'
+    # file_output = 'bosphorus_daia_augmentation_2.h5'
+    # file_output = 'bosphorus_daia_augmentation_4.h5'
+    # file_output = 'bosphorus_daia_augmentation_3.h5'
+    # file_output = 'bosphorus_daia_augmentation_5.h5'
 elif 'BU_3DFE' in dataset_name:
     file_output = 'bu_3dfe.h5'
+    # file_output = 'bu_3dfe_daia_augmentation_1.h5'
+    # file_output = 'bu_3dfe_daia_augmentation_2.h5'
+    # file_output = 'bu_3dfe_daia_augmentation_3.h5'
+    # file_output = 'bu_3dfe_daia_augmentation_5.h5'
 else:
     file_output = 'dataset.h5'
 
@@ -352,8 +369,28 @@ processed_train_images = [preprocess_image(img, clip_limit, sigma) for img in X_
 processed_val_images = [preprocess_image(img, clip_limit, sigma) for img in X_valid]
 processed_test_images = [preprocess_image(img, clip_limit, sigma) for img in X_test]
 
+### Bosphorus ###
+save_path = 'processed_bosphorus_5.h5'
+# save_path = 'processed_bosphorus.h5'
+# save_path = 'processed_bosphorus_2.h5'
+# save_path = 'processed_bosphorus_3.h5'
+# save_path = 'processed_bosphorus_5.h5'
+
+### CK+ ###
+# save_path = 'processed_ckplus_1.h5'
+# save_path = 'processed_ckplus_2.h5'
+# save_path = 'processed_ckplus_3.h5'
+# save_path = 'processed_ckplus_5.h5'
+
+### BU_3DFE ###
+# save_path = 'processed_bu_3dfe.h5'
+# save_path = 'processed_bu_3dfe_2.h5'
+# save_path = 'processed_bu_3dfe_3.h5'
+# save_path = 'processed_bu_3dfe_5.h5'
+
+
 # Salva tutte le immagini preprocessate
-save_data('processed_bosphorus_5.h5', processed_train_images, y_train, 
+save_data(save_path, processed_train_images, y_train, 
           processed_val_images, y_valid, 
           processed_test_images, y_test)
 
@@ -362,4 +399,4 @@ example_index = 0  # Indice dell'immagine da visualizzare
 original_image = X_train[example_index].copy()  # Assicurati di fare una copia dell'immagine originale
 gray, equalized, blurred, normalized, processed_image = preprocess_image(original_image, clip_limit, sigma, return_intermediate=True)
 
-visualize_intermediate_steps(original_image, gray, equalized, blurred, normalized, processed_image)
+visualize_intermediate_steps(original_image, gray, equalized, blurred, normalized, processed_image,save_path)
