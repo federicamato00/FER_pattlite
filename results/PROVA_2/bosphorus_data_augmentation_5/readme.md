@@ -2,7 +2,7 @@
  
 Possiamo fare le seguenti osservazioni:
 
-## Grafico 1: [confusion_matrix](./bosphorus_data_augmentation_4/confusion_matrix.png)
+## Grafico 1: [confusion_matrix](./confusion_matrix.png)
 
 Dalla matrice di confusione che hai fornito, puoi dedurre le seguenti informazioni sul tuo modello di classificazione:
 
@@ -12,7 +12,7 @@ Dalla matrice di confusione che hai fornito, puoi dedurre le seguenti informazio
 
 Questa analisi ti aiuta a capire dove il modello sta performando bene e dove potrebbe necessitare di miglioramenti. 
 
-## Grafico 2: [Training e Validation plots](./bosphorus_data_augmentation_3/training_validation_plots.png)
+## Grafico 2: [Training e Validation plots](./training_validation_plots.png)
 
 Ci sono due grafici:
 
@@ -29,8 +29,8 @@ Ci sono due grafici:
     - **Fluttuazioni**: Le fluttuazioni nelle linee di validazione potrebbero indicare variabilità nei dati o potenziale overfitting. Potrebbe essere utile monitorare queste fluttuazioni e considerare tecniche di regolarizzazione.
 
 
-## [Parameters]
-I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./bosphorus_data_augmentation_5/parameters.txt). Per questa prima prova, si sono ottenuti i seguenti risultati:
+## [Parameters](./parameters.txt)
+I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./parameters.txt). Per questa prima prova, si sono ottenuti i seguenti risultati:
 
 accuracy test set: 92.88%
 accuracy train set: 94.71%

@@ -2,7 +2,7 @@
  
 Possiamo fare le seguenti osservazioni:
 
-## Grafico 1: [confusion_matrix](./bosphorus_data_augmentation_batch32_batch&drop/confusion_matrix.png)
+## Grafico 1: [confusion_matrix](./confusion_matrix.png)
 
 L'immagine mostra una **matrice di confusione**, uno strumento utilizzato nel machine learning per valutare le prestazioni di un modello di classificazione. Ecco una spiegazione dei risultati:
 
@@ -10,7 +10,7 @@ L'immagine mostra una **matrice di confusione**, uno strumento utilizzato nel ma
 - **Confusioni comuni**: Ci sono alcune confusioni evidenti, ad esempio, **"disgust"** è stato confuso con **"anger"** in 3 casi e **"fear"** con **"neutral"** in 5 casi.
 - **Performance generale**: Il modello sembra avere una buona precisione per alcune emozioni, ma potrebbe migliorare nella distinzione tra emozioni simili come **"disgust"** e **"anger"**.
 
-## Grafico 2: [Training e Validation plots](./bosphorus_data_augmentation_batch32_batch&drop/training_validation_plots.png)
+## Grafico 2: [Training e Validation plots](./training_validation_plots.png)
 
 Ci sono due grafici:
 
@@ -20,8 +20,8 @@ Ci sono due grafici:
 
 Questi grafici indicano che il modello sta migliorando nel tempo, ma è importante monitorare l'overfitting per garantire che il modello generalizzi bene su dati non visti. 
 
-## [Parameters] (./bbosphorus_data_augmentation_batch32_batch&drop/parameters.txt)
-I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./bosphorus_data_augmentation_batch32_batch&drop/parameters.txt). Per questa prova, si sono ottenuti i seguenti risultati:
+## [Parameters] (./parameters.txt)
+I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./parameters.txt). Per questa prova, si sono ottenuti i seguenti risultati:
 - accuracy test set: 88.03%
 - accuracy train set: 85.71%
 - accuracy validation set: 91.40%

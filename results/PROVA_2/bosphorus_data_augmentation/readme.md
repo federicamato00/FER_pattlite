@@ -3,11 +3,7 @@
 Questa cartella contiene varie prove e vari grafici dei risultati ottenuti usando diverse combinazioni di dataset e/o parametri per il modello da addestrare.
 
 
-Questa cartella contiene varie prove e vari grafici dei risultati ottenuti usando diverse combinazioni di dataset e/o parametri per il modello da addestrare.
-
-Nella cartella [bosphorus_data_augmentation](./bosphorus_data_augmentation) ci sono tre documenti, di cui un file denominato [parameters.txt](./bosphorus_data_augmentation/parameters.txt) che contiene le specifiche dei parametri usati per il modello che ha ottenuto i risultati rappresentati nella Confusion Matrix presente in [confusion_matrix.png](./bosphorus_data_augmentation/confusion_matrix.png) e nei grafici di accuratezza e loss presenti in [training_validation_plots.png](./bosphorus_data_augmentation/training_validation_plots.png). In particolare, possiamo fare le seguenti osservazioni:
-
-## Grafico 1: [confusion_matrix](./bosphorus_data_augmentation/confusion_matrix.png)
+## Grafico 1: [confusion_matrix](./confusion_matrix.png)
 
 1. **Classi e Predizioni**: La matrice di confusione mostra le predizioni del modello per sette classi di emozioni: **anger (rabbia)**, **disgust (disgusto)**, **fear (paura)**, **happiness (felicità)**, **sadness (tristezza)**, **surprise (sorpresa)** e **neutral (neutro)**. Le righe rappresentano le etichette vere, mentre le colonne rappresentano le etichette predette.
 
@@ -16,7 +12,7 @@ Nella cartella [bosphorus_data_augmentation](./bosphorus_data_augmentation) ci s
 3. **Errori di Predizione**: Le celle fuori dalla diagonale mostrano le predizioni errate. Ad esempio, c'è un caso in cui "sadness" è stato predetto come "anger" e un caso in cui "neutral" è stato predetto come "anger".
 
 
-## Grafico 2: [Training e Validation plots](./bosphorus_data_augmentation/training_validation_plots.png)
+## Grafico 2: [Training e Validation plots](./training_validation_plots.png)
 Ci sono due sottografici: 
 1.  Training and Validation Accuracy
     - **Curva Blu (Training Accuracy)**: Mostra l'accuratezza del modello sui dati di addestramento. La curva sale costantemente, indicando che il modello sta imparando bene dai dati di addestramento.
@@ -32,8 +28,8 @@ Ci sono due sottografici:
 
 
 
-## [Parameters]
-I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./bosphorus_data_augmentation/parameters.txt). Per questa prima prova, si sono ottenuti i seguenti risultati:
+## [Parameters](./parameters.txt)
+I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./parameters.txt). Per questa prima prova, si sono ottenuti i seguenti risultati:
 - accuracy test set: 90.38%
 - accuracy train set: 93.15%
 - accuracy validation set: 88.45%

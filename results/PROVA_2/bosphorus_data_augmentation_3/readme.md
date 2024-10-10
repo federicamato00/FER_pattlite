@@ -2,7 +2,7 @@
  
  Possiamo fare le seguenti osservazioni:
 
-## Grafico 1: [confusion_matrix](./bosphorus_data_augmentation_3/confusion_matrix.png)
+## Grafico 1: [confusion_matrix](./confusion_matrix.png)
 
 La confusion matrix mostra le prestazioni di un modello di classificazione su un set di dati di test. Le righe rappresentano le etichette vere, mentre le colonne rappresentano le etichette predette dal modello.
 
@@ -18,7 +18,7 @@ La confusion matrix mostra le prestazioni di un modello di classificazione su un
 - **Bilanciamento del Dataset**: Se alcune classi hanno molte più istanze corrette rispetto ad altre, potrebbe essere utile bilanciare il dataset per migliorare le prestazioni del modello.
 
 
-## Grafico 2: [Training e Validation plots](./bosphorus_data_augmentation_3/training_validation_plots.png)
+## Grafico 2: [Training e Validation plots](./training_validation_plots.png)
 
 Ci sono due grafici:
 1. Training e Validation Accuracy
@@ -34,8 +34,8 @@ Ci sono due grafici:
     2. **Stabilità**: Le fluttuazioni nella curva di validation loss indicano che il modello potrebbe beneficiare di ulteriori tecniche di regolarizzazione o di un maggior numero di dati di addestramento.
 
 
-## [Parameters]
-I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./bosphorus_data_augmentation_3/parameters.txt). Per questa prima prova, si sono ottenuti i seguenti risultati:
+## [Parameters](./parameters.txt)
+I parametri usati per l'addestramento di questo modello, sono raccolti nel file denominato [parameters.txt](./parameters.txt). Per questa prima prova, si sono ottenuti i seguenti risultati:
 - accuracy test set: 65.27%
 - accuracy train set: 83.54%
 - accuracy validation set: 64.08%
