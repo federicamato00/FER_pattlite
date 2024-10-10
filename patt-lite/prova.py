@@ -26,7 +26,7 @@ class SeparableConv2DWithReg(tf.keras.layers.Layer):
             self.add_loss(self.kernel_regularizer(self.separable_conv.pointwise_kernel))
         return outputs
     
-    
+
 def plot_class_distribution(y_train, y_val, y_test, class_names):
     # Conta il numero di campioni per ciascuna classe in ogni set
     train_counts = np.bincount(y_train)
@@ -220,7 +220,28 @@ plot_class_distribution(y_train, y_valid, y_test, class_names)
 #     return X, y
 
 # Percorsi ai file preprocessati
-dataset_file_path = os.path.join('datasets', dataset_name, 'bosphorus_data_augmentation_5.h5')
+### Bosphorus ###
+
+save_path = 'bosphorus_data_augmentation_5.h5'
+# save_path = 'bosphorus_data_augmentation.h5'
+# save_path = 'bosphorus_data_augmentation_2.h5'
+# save_path = 'bosphorus_data_augmentation_3.h5'
+# save_path = 'bosphorus_data_augmentation_4.h5'
+
+
+### CK+ ###
+# save_path = 'ckplus_data_augmentation_1.h5'
+# save_path = 'ckplus_data_augmentation_2.h5'
+# save_path = 'ckplus_data_augmentation_3.h5'
+# save_path = 'ckplus_data_augmentation_5.h5'
+
+### BU_3DFE ###
+# save_path = 'bu_3dfe_data_augmentation.h5'
+# save_path = 'bu_3dfe_data_augmentation_2.h5'
+# save_path = 'bu_3dfe_data_augmentation_3.h5'
+# save_path = 'bu_3dfe_data_augmentation_5.h5'
+
+dataset_file_path = os.path.join('datasets', dataset_name, save_path)
 # valid_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'valid.h5')
 # test_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'test.h5')
 
@@ -230,7 +251,7 @@ X_train_original, y_train_original, X_valid_original, y_valid_original, X_test_o
 # X_test_preprocessed, y_test_preprocessed = load_preprocessed_data(test_file_path)
 
 # Verifica visiva delle immagini preprocessate
-def visualize_images(original_images,preprocessed_images, num_images=5):
+def visualize_images(original_images,preprocessed_images, path_name, num_images=5):
     fig, axes = plt.subplots(2, num_images, figsize=(15, 5))
     for i in range(num_images):
         axes[0, i].imshow(original_images[i])
@@ -240,11 +261,14 @@ def visualize_images(original_images,preprocessed_images, num_images=5):
         axes[1, i].imshow(preprocessed_images[i])
         axes[1, i].set_title('Preprocessed')
         axes[1, i].axis('off')
-    plt.savefig('five_examples_5.png')
+    title_new = path_name.split('.')[0]
+    title_new = title_new + '_five_examples.png'
+    plot_path = os.path.join('images',dataset_name, title_new)
+    plt.savefig(plot_path)
     plt.show()
 
 # Esempio di utilizzo
-visualize_images(X_train_original[:5],X_train[:5])
+visualize_images(X_train_original[:5],X_train[:5],save_path)
 
 # Load your data here, PAtt-Lite was trained with h5py for shorter loading time
 X_train, y_train = shuffle(X_train, y_train)
