@@ -1,0 +1,5 @@
+units: 96
+dropout_rate: 0.3
+train_dropout: 0.3
+learning_rate: 0.0005124  
+l2_reg: 0.00017434
