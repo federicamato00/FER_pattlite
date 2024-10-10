@@ -8,11 +8,32 @@ import keras_tuner as kt
 from tensorflow.keras.regularizers import l2
 
 # Parametri
-NUM_CLASSES = 7
+NUM_CLASSES = 8
 IMG_SHAPE = (120, 120, 3)
 
 # Caricamento dati
-file_output = 'bosphorus_prova.h5'
+
+### PER CK+ ### 
+file_output = 'ckplus_data_augmentation_5.h5'
+# file_output = 'ckplus_data_augmentation_1.h5'
+# file_output = 'ckplus_data_augmentation_2.h5'
+# file_output = 'ckplus_data_augmentation_3.h5'
+# file_output = 'ckplus.h5'
+
+### PER BOSPHORUS ###
+# file_output = 'bosphorus.h5'
+# file_output = 'bosphorus_data_augmentation_2.h5'
+# file_output = 'bosphorus_data_augmentation_3.h5'
+# file_output = 'bosphorus_data_augmentation_4.h5'
+# file_output = 'bosphorus_data_augmentation_5.h5'
+
+### PER BU-3DFE ###
+# file_output = 'bu3dfe.h5'
+# file_output = 'bu3dfe_data_augmentation_2.h5'
+# file_output = 'bu3dfe_data_augmentation_3.h5'
+# file_output = 'bu3dfe_data_augmentation_4.h5'
+# file_output = 'bu3dfe_data_augmentation_5.h5'
+
 with h5py.File(file_output, 'r') as f:
     X_train = np.array(f['X_train'])
     y_train = np.array(f['y_train'])
@@ -99,7 +120,7 @@ the optimal L2 regularization is {best_hps.get('l2_reg')}.
 """)
 
 # Salva i migliori iperparametri in un file
-with open('best_hyperparameters.txt', 'w') as f:
+with open('best_hyperparameters_ckplus.txt', 'w') as f:
     f.write(f"units: {best_hps.get('units')}\n")
     f.write(f"dropout_rate: {best_hps.get('dropout_rate')}\n")
     f.write(f"train_dropout: {best_hps.get('train_dropout')}\n")
