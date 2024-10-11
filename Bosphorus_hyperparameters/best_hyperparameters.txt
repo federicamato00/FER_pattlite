@@ -1,5 +1,0 @@
-units: 64
-dropout_rate: 0.3
-train_dropout: 0.2
-learning_rate: 0.0003676246415061172
-l2_reg: 1.1836073889833174e-05

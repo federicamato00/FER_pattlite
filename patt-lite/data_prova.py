@@ -169,7 +169,7 @@ def load_data(
             #     iaa.GaussianBlur(sigma=(0, 1.0))  # blur
             # ])
 
-            '''seconda prova, salvato in boss_data_augmentation_2.h5'''
+        #     '''seconda prova, salvato in boss_data_augmentation_2.h5'''
         #     augmentations = iaa.Sequential([
         #     iaa.Fliplr(0.5),  # flip orizzontale
         #     iaa.Affine(rotate=(-20, 20)),  # rotazione
@@ -238,31 +238,31 @@ def load_data(
 
             
         '''prova ad aumentare il numero di campioni per classe'''
-        '''salvato in boss_data_augmentation_4.h5'''
-        # # Aumenta ulteriormente il numero di dati per ogni classe
-        # X_augmented, y_augmented = [], []
-        # for class_idx in unique_classes:
-        #     class_images = X[y == class_idx]
-        #     class_labels = y[y == class_idx]
-        #     target_count = additional_images_per_class
-        #     augmented_images, augmented_labels = augment_images(class_images, class_labels, augmentations, target_count)
-        #     X_augmented.append(augmented_images)
-        #     y_augmented.append(augmented_labels)
+        '''salvato in boss_data_augmentation_5.h5'''
+        # Aumenta ulteriormente il numero di dati per ogni classe
+        X_augmented, y_augmented = [], []
+        for class_idx in unique_classes:
+            class_images = X[y == class_idx]
+            class_labels = y[y == class_idx]
+            target_count = additional_images_per_class
+            augmented_images, augmented_labels = augment_images(class_images, class_labels, augmentations, target_count)
+            X_augmented.append(augmented_images)
+            y_augmented.append(augmented_labels)
         
-        # X_augmented = np.concatenate(X_augmented, axis=0)
-        # y_augmented = np.concatenate(y_augmented, axis=0)
+        X_augmented = np.concatenate(X_augmented, axis=0)
+        y_augmented = np.concatenate(y_augmented, axis=0)
         
-        # X = np.concatenate((X, X_augmented), axis=0)
-        # y = np.concatenate((y, y_augmented), axis=0)
-        # print("Ulteriore aumento del numero di campioni per classe completato.")
-        # # Visualizza la distribuzione delle classi dopo ulteriore aumento
-        # plt.figure(figsize=(10, 5))
-        # plt.bar(np.unique(y), np.bincount(y))
-        # plt.title('Distribuzione delle classi dopo ulteriore aumento')
-        # plt.xlabel('Classi')
-        # plt.ylabel('Numero di campioni')
-        # plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
-        # plt.savefig(os.path.join(path_distribution, 'dopo_ulteriore_aumento_2.png'))
+        X = np.concatenate((X, X_augmented), axis=0)
+        y = np.concatenate((y, y_augmented), axis=0)
+        print("Ulteriore aumento del numero di campioni per classe completato.")
+        # Visualizza la distribuzione delle classi dopo ulteriore aumento
+        plt.figure(figsize=(10, 5))
+        plt.bar(np.unique(y), np.bincount(y))
+        plt.title('Distribuzione delle classi dopo ulteriore aumento')
+        plt.xlabel('Classi')
+        plt.ylabel('Numero di campioni')
+        plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
+        plt.savefig(os.path.join(path_distribution, 'dopo_ulteriore_aumento_2.png'))
    
 
     # Split the data into train, val, and test sets
@@ -275,7 +275,7 @@ def load_data(
 dataset_name='CK+' # 'CK+', 'RAFDB', 'FERP', 'JAFFE', 'Bosphorus'
 
 print("Loading data...")
-X, y = load_data('', dataset_name, use_augmentation=True)
+X, y = load_data('datasets', dataset_name, use_augmentation=True)
 if 'CK+' in dataset_name:
     file_output = 'ckplus_data_augmentation_5' 
 elif 'RAFDB' in dataset_name:

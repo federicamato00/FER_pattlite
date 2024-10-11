@@ -1,0 +1,17 @@
+Best Hyperparameters for Training:
+BATCH_SIZE: 64
+l2_reg: 1.908664998968132e-05
+units: 96
+l2_reg_fine_tuning: 5.738307569563294e-05
+dropout_rate: 0.6000000000000001
+TRAIN_DROPOUT: 0.2
+TRAIN_LR: 0.002164028910419224
+
+Best Hyperparameters for Fine-Tuning:
+BATCH_SIZE: 16
+l2_reg_fine_tuning: 5.428659940212535e-05
+units_ft: 96
+l2_reg: 2.229783716862923e-05
+dropout_rate: 0.3
+FT_DROPOUT: 0.2
+FT_LR: 0.0037458570407684

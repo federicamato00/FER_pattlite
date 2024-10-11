@@ -117,7 +117,7 @@ def load_data(
 
 
 dataset_name='CK+' # 'CK+', 'RAFDB', 'FERP', 'JAFFE', 'Bosphorus'
-X, y = load_data('', dataset_name)
+X, y = load_data('datasets', dataset_name)
 if 'CK+' in dataset_name:
     file_output = 'ckplus.h5'
 elif 'RAFDB' in dataset_name:
