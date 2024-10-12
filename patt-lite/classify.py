@@ -51,7 +51,7 @@ def visualize_intermediate_steps(original, gray, equalized, blurred, normalized,
     axes[5].set_title('Processed Image')
     axes[5].axis('off')
     title_new = save_path.split('.')[0]
-    title_new = title_new+'.png'
+    title_new = title_new+'_data_augmentation_3'+'.png'
     plot_save_path = os.path.join('classify',dataset_name, title_new)
     plt.savefig(plot_save_path)
     plt.show()
@@ -173,52 +173,45 @@ class SqueezeLayer(Layer):
     def call(self, inputs):
         return tf.squeeze(inputs, axis=self.axis)
 
+dataset_name='Bosphorus'
+# dataset_name='CK+'
+# dataset_name='BU_3DFE'
+name_best = dataset_name + '_hyperparameters'
+best_path = os.path.join(name_best,'bosphorus_data_augmentation_hyperparameters_3.txt')
 # Carica i migliori iperparametri dal file
-with open('best_hyperparameters.txt', 'r') as f:
+with open(best_path, 'r') as f:
     best_hps = {}
     for line in f:
+        print(line)
         name, value = line.strip().split(': ')
         if name in ['units']:
             best_hps[name] = int(float(value))  # Converti esplicitamente a int
         else:
             best_hps[name] = float(value)
 
-# Carica i migliori iperparametri per fine tuning dal file
-with open('best_finetune_hyperparameters.txt', 'r') as f:
-    best_hps_ft = {}
-    for line in f:
-        name, value = line.strip().split(': ')
-        if name in ['units']:
-            best_hps_ft[name] = int(float(value))  # Converti esplicitamente a int
-        else:
-            best_hps_ft[name] = float(value)
-
 # Parametri
 NUM_CLASSES = 7
 IMG_SHAPE = (120, 120, 3)
-BATCH_SIZE = 8
+BATCH_SIZE = int(best_hps['BATCH_SIZE'])
 
 TRAIN_EPOCH = 100
-TRAIN_LR = best_hps['learning_rate']
+TRAIN_LR = best_hps['TRAIN_LR']
 TRAIN_ES_PATIENCE = 5
 TRAIN_LR_PATIENCE = 3
 TRAIN_MIN_LR = 1e-6
-TRAIN_DROPOUT = best_hps['train_dropout']
+TRAIN_DROPOUT = best_hps['TRAIN_DROPOUT']
 
 FT_EPOCH = 500
-FT_LR = best_hps_ft['ft_learning_rate']
+FT_LR = best_hps['FT_LR']
 FT_LR_DECAY_STEP = 80.0
 FT_LR_DECAY_RATE = 0.5 #era a 1 ma ho messo 0.5
 
 FT_ES_PATIENCE = 20 #numero di epoche di tolleranza per l'arresto anticipato
-FT_DROPOUT = best_hps['train_dropout']
-dropout_rate = best_hps['dropout_rate']
+FT_DROPOUT = best_hps['FT_DROPOUT']
+dropout_rate = best_hps['dropout_rate_FT']
 
 ES_LR_MIN_DELTA = 0.003 #quantità minima di cambiamento per considerare un miglioramento
 
-dataset_name='Bosphorus'
-# dataset_name='CK+'
-# dataset_name='BU_3DFE'
 
 if 'CK+' in dataset_name:
     file_output = 'ckplus.h5'
@@ -233,12 +226,12 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe.h5'
 elif 'Bosphorus' in dataset_name:
-    file_output = 'bosphorus.h5'
-    # file_output = 'bosphorus_daia_augmentation.h5'
-    # file_output = 'bosphorus_daia_augmentation_2.h5'
-    # file_output = 'bosphorus_daia_augmentation_4.h5'
-    # file_output = 'bosphorus_daia_augmentation_3.h5'
-    # file_output = 'bosphorus_daia_augmentation_5.h5'
+    # file_output = 'bosphorus.h5'
+    # file_output = 'bosphorus_data_augmentation.h5'
+    # file_output = 'bosphorus_data_augmentation_2.h5'
+    # file_output = 'bosphorus_data_augmentation_4.h5'
+    file_output = 'bosphorus_data_augmentation_3.h5'
+    #  file_output = 'bosphorus_data_augmentation_5.h5'
 elif 'BU_3DFE' in dataset_name:
     file_output = 'bu_3dfe.h5'
     # file_output = 'bu_3dfe_daia_augmentation_1.h5'
@@ -316,9 +309,9 @@ patch_extraction = tf.keras.Sequential([
 
 global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name='gap')
 pre_classification = tf.keras.Sequential([
-    tf.keras.layers.Dense(best_hps['units'], activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])), 
+    tf.keras.layers.Dense(best_hps['units'], activation='relu', kernel_regularizer=l2(best_hps['l2_reg_2'])), 
     tf.keras.layers.BatchNormalization(),  
-    tf.keras.layers.Dropout(dropout_rate)  # Aggiungi dropout
+    tf.keras.layers.Dropout(best_hps['dropout_rate'])  # Aggiungi dropout
 ], name='pre_classification')
 
 prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="softmax", name='classification_head')
@@ -370,10 +363,10 @@ processed_val_images = [preprocess_image(img, clip_limit, sigma) for img in X_va
 processed_test_images = [preprocess_image(img, clip_limit, sigma) for img in X_test]
 
 ### Bosphorus ###
-save_path = 'processed_bosphorus_5.h5'
+# save_path = 'processed_bosphorus_5.h5'
 # save_path = 'processed_bosphorus.h5'
 # save_path = 'processed_bosphorus_2.h5'
-# save_path = 'processed_bosphorus_3.h5'
+save_path = 'processed_bosphorus_3.h5'
 # save_path = 'processed_bosphorus_5.h5'
 
 ### CK+ ###

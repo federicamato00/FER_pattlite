@@ -11,9 +11,9 @@ NUM_CLASSES = 7
 IMG_SHAPE = (120, 120, 3)
 dataset_name = 'Bosphorus'
 # Caricamento dati
-file_output = os.path.join('datasets', dataset_name, 'bosphorus_data_augmentation_5.h5')
+file_output = os.path.join('datasets', dataset_name, 'bosphorus_data_augmentation.h5')
 best_path_save = dataset_name + '_hyperparameters'
-best_path = os.path.join(best_path_save, 'bosphorus_data_augmentation_hyperparameters_2.txt')
+best_path = os.path.join(best_path_save, 'bosphorus_data_augmentation_hyperparameters.txt')
 with h5py.File(file_output, 'r') as f:
     X_train = np.array(f['X_train'])
     y_train = np.array(f['y_train'])
