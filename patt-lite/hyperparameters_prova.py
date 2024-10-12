@@ -7,13 +7,16 @@ import h5py
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
 
-NUM_CLASSES = 7
+NUM_CLASSES = 8
 IMG_SHAPE = (120, 120, 3)
-dataset_name = 'Bosphorus'
+dataset_name = 'CK+'
 # Caricamento dati
-file_output = os.path.join('datasets', dataset_name, 'bosphorus_data_augmentation.h5')
+file_output = os.path.join('datasets', dataset_name, 'ckplus_data_augmentation_3.h5')
 best_path_save = dataset_name + '_hyperparameters'
-best_path = os.path.join(best_path_save, 'bosphorus_data_augmentation_hyperparameters.txt')
+best_path = os.path.join(best_path_save, 'ckplus_data_augmentation_hyperparameters_3.txt')
+if not os.path.exists(best_path_save):
+    os.makedirs(best_path_save)
+
 with h5py.File(file_output, 'r') as f:
     X_train = np.array(f['X_train'])
     y_train = np.array(f['y_train'])
@@ -55,7 +58,7 @@ class PattLiteHyperModel(HyperModel):
         global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name='gap')
         pre_classification = tf.keras.Sequential([
         tf.keras.layers.Dense(hp.Int('units', min_value=32, max_value=128, step=32), activation='relu', 
-                              kernel_regularizer=regularizers.l2(hp.Float('l2_reg_fine_tuning', min_value=1e-5, max_value=1e-2, sampling='LOG'))),
+                              kernel_regularizer=regularizers.l2(hp.Float('l2_reg_2', min_value=1e-5, max_value=1e-2, sampling='LOG'))),
         tf.keras.layers.BatchNormalization(),
         tf.keras.layers.Dropout(hp.Float('dropout_rate', min_value=0.3, max_value=0.7, step=0.1))
         ], name='pre_classification')
@@ -94,7 +97,7 @@ class PattLiteFineTuneHyperModel(HyperModel):
 
     def build(self, hp):
         self.base_model.trainable = True
-        batch_size = hp.Choice('BATCH_SIZE', [16, 32, 64])
+        batch_size = hp.Choice('BATCH_SIZE_FT', [16, 32, 64])
         fine_tune_from = len(self.base_model.layers) - self.unfreeze
         for layer in self.base_model.layers[:fine_tune_from]:
             layer.trainable = False
@@ -118,9 +121,9 @@ class PattLiteFineTuneHyperModel(HyperModel):
         
         pre_classification = tf.keras.Sequential([
         tf.keras.layers.Dense(hp.Int('units_ft', min_value=32, max_value=128, step=32), activation='relu', 
-                              kernel_regularizer=regularizers.l2(hp.Float('l2_reg', min_value=1e-5, max_value=1e-2, sampling='LOG'))),
+                              kernel_regularizer=regularizers.l2(hp.Float('l2_reg_FT', min_value=1e-5, max_value=1e-2, sampling='LOG'))),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(hp.Float('dropout_rate', min_value=0.3, max_value=0.7, step=0.1))
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT', min_value=0.3, max_value=0.7, step=0.1))
         ], name='pre_classification')
         self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
         inputs = input_layer
@@ -155,14 +158,13 @@ backbone.trainable = False
 base_model = tf.keras.Model(backbone.input, backbone.layers[-29].output, name='base_model')
 
 tuner_train = RandomSearch(
-    PattLiteHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=7),
+    PattLiteHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=8),
     objective='val_accuracy',
     max_trials=20,
     executions_per_trial=1,
     directory='pattlite_tuning',
     project_name='pattlite_train'
 )
-
 
 class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
 class_weights = dict(enumerate(class_weights))
@@ -180,7 +182,7 @@ best_train_hp = tuner_train.get_best_hyperparameters(num_trials=1)[0]
 
 # Utilizzare il miglior modello trovato per il fine-tuning
 tuner_finetune = RandomSearch(
-    PattLiteFineTuneHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=7, base_model=best_train_model, unfreeze=59),
+    PattLiteFineTuneHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=8, base_model=best_train_model, unfreeze=59),
     objective='val_accuracy',
     max_trials=20,
     executions_per_trial=1,
@@ -199,9 +201,7 @@ best_finetune_model = tuner_finetune.get_best_models(num_models=1)[0]
 best_finetune_hp = tuner_finetune.get_best_hyperparameters(num_trials=1)[0]
 
 with open(best_path, 'w') as f:
-    f.write("Best Hyperparameters for Training:\n")
     for param, value in best_train_hp.values.items():
         f.write(f"{param}: {value}\n")
-    f.write("\nBest Hyperparameters for Fine-Tuning:\n")
     for param, value in best_finetune_hp.values.items():
         f.write(f"{param}: {value}\n")

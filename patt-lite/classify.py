@@ -366,7 +366,7 @@ processed_test_images = [preprocess_image(img, clip_limit, sigma) for img in X_t
 # save_path = 'processed_bosphorus_5.h5'
 # save_path = 'processed_bosphorus.h5'
 # save_path = 'processed_bosphorus_2.h5'
-save_path = 'processed_bosphorus_3.h5'
+# save_path = 'processed_bosphorus_3.h5'
 # save_path = 'processed_bosphorus_5.h5'
 
 ### CK+ ###

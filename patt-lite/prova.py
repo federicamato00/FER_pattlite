@@ -7,7 +7,7 @@ from sklearn.utils import compute_class_weight, shuffle
 import tensorflow as tf
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
-import os 
+import os
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
@@ -25,7 +25,7 @@ class SeparableConv2DWithReg(tf.keras.layers.Layer):
             self.add_loss(self.kernel_regularizer(self.separable_conv.depthwise_kernel))
             self.add_loss(self.kernel_regularizer(self.separable_conv.pointwise_kernel))
         return outputs
-    
+
 
 def plot_class_distribution(y_train, y_val, y_test, class_names):
     # Conta il numero di campioni per ciascuna classe in ogni set
@@ -69,13 +69,13 @@ def create_unique_directory(base_dir):
     if not os.path.exists(base_dir):
         os.makedirs(base_dir)
         return base_dir
-    
+
     counter = 1
     new_dir = f"{base_dir}_{counter}"
     while os.path.exists(new_dir):
         counter += 1
         new_dir = f"{base_dir}_{counter}"
-    
+
     os.makedirs(new_dir)
     return new_dir
 
@@ -89,10 +89,20 @@ def save_parameters(params, directory, filename="parameters.txt"):
             f.write(f"{key}: {value}\n")
 
 
-############ modello con batch normalization prima di drop in patch extraction 
+############ modello con batch normalization prima di drop in patch extraction
+dataset_name='Bosphorus'
+best_path = dataset_name + '_hyperparameters'
+# best_path = 'ckplus_hyperparameters'
+# best_path = 'bu_3dfe_hyperparameters'
 
+best_file = dataset_name.lower() + '_data_augmentation_hyperparameters_5.txt'
+# best_file = dataset_name.lower()+'_data_augmentation_hyperparameters.txt'
+# best_file = dataset_name.lower()+'_data_augmentation_hyperparameters_2.txt'
+# best_file = dataset_name.lower()+'_data_augmentation_hyperparameters_3.txt'
+
+file_best_path = os.path.join(best_path, best_file)
 # Carica i migliori iperparametri dal file
-with open('best_hyperparameters.txt', 'r') as f:
+with open(file_best_path, 'r') as f:
     best_hps = {}
     for line in f:
         name, value = line.strip().split(': ')
@@ -101,15 +111,6 @@ with open('best_hyperparameters.txt', 'r') as f:
         else:
             best_hps[name] = float(value)
 
-# Carica i migliori iperparametri per fine tuning dal file
-with open('best_finetune_hyperparameters.txt', 'r') as f:
-    best_hps_ft = {}
-    for line in f:
-        name, value = line.strip().split(': ')
-        if name in ['units']:
-            best_hps_ft[name] = int(float(value))  # Converti esplicitamente a int
-        else:
-            best_hps_ft[name] = float(value)
 
 
 class ExpandDimsLayer(Layer):
@@ -133,39 +134,38 @@ class SqueezeLayer(Layer):
 # Parametri
 NUM_CLASSES = 7
 IMG_SHAPE = (120, 120, 3)
-BATCH_SIZE = 32 ##prova con 32
+BATCH_SIZE = int(best_hps['BATCH_SIZE']) 
 
 TRAIN_EPOCH = 100
-TRAIN_LR = best_hps['learning_rate']
-TRAIN_ES_PATIENCE = 5
-TRAIN_LR_PATIENCE = 3
+TRAIN_LR = best_hps['TRAIN_LR']
+TRAIN_ES_PATIENCE = 5 #aumentare a 10 da 5
+TRAIN_LR_PATIENCE = 3 #augmentare a 5 da 3
 TRAIN_MIN_LR = 1e-6
-TRAIN_DROPOUT = best_hps['train_dropout']
+TRAIN_DROPOUT = best_hps['TRAIN_DROPOUT']
 
 FT_EPOCH = 500
-FT_LR = best_hps_ft['ft_learning_rate']
+FT_LR = best_hps['FT_LR']
 FT_LR_DECAY_STEP = 80.0
-FT_LR_DECAY_RATE = 0.5 #era a 1 ma ho messo 0.5
+FT_LR_DECAY_RATE = 1.0 #era a 1 ma ho messo 0.5
 
 ######
 # Epochs successive: Se l'epoca corrente è maggiore o uguale a FT_LR_DECAY_STEP,
-# la funzione riduce il learning rate moltiplicandolo per 0.5. Questo significa che il 
+# la funzione riduce il learning rate moltiplicandolo per 0.5. Questo significa che il
 # learning rate viene dimezzato per rendere l'addestramento più fine e stabile nelle fasi successive.
-
-FT_ES_PATIENCE = 20 #numero di epoche di tolleranza per l'arresto anticipato
-FT_DROPOUT = best_hps['train_dropout']
-dropout_rate = best_hps['dropout_rate']
+BATCH_SIZE_FT = int(best_hps['BATCH_SIZE_FT'])
+FT_ES_PATIENCE = 40 #numero di epoche di tolleranza per l'arresto anticipato, aumentato da 20 a 40
+FT_DROPOUT = best_hps['FT_DROPOUT']
+dropout_rate = best_hps['dropout_rate_FT']
 
 ES_LR_MIN_DELTA = 0.003 #quantità minima di cambiamento per considerare un miglioramento
 
-dataset_name='Bosphorus'
 
 
 
 # Funzione per caricare le immagini e le etichette
 def load_images_and_labels(file_path):
     with h5py.File(file_path, 'r') as f:
-        
+
         if file_path=='processed_bosphorus_5.h5':
             X_train = np.array(f['X_train'])
             y_train = np.array(f['y_train'])
@@ -186,7 +186,7 @@ def load_images_and_labels(file_path):
 def resize_images(X, target_size=(120, 120)):
     return np.array([tf.image.resize(image, target_size).numpy() for image in X])
 
-# Carica le immagini 
+# Carica le immagini
 path_easy = 'datasets/preprocessing/Bosphorus/SMOTE'
 
 X_train, y_train , X_valid, y_valid, X_test, y_test= load_images_and_labels( 'processed_bosphorus_5.h5')
@@ -257,7 +257,7 @@ def visualize_images(original_images,preprocessed_images, path_name, num_images=
         axes[0, i].imshow(original_images[i])
         axes[0, i].set_title('Original')
         axes[0, i].axis('off')
-        
+
         axes[1, i].imshow(preprocessed_images[i])
         axes[1, i].set_title('Preprocessed')
         axes[1, i].axis('off')
@@ -273,7 +273,7 @@ visualize_images(X_train_original[:5],X_train[:5],save_path)
 # Load your data here, PAtt-Lite was trained with h5py for shorter loading time
 X_train, y_train = shuffle(X_train, y_train)
 X_valid, y_valid = shuffle(X_valid, y_valid)
-X_test, y_test = shuffle(X_test, y_test)    
+X_test, y_test = shuffle(X_test, y_test)
 
 
 class_weights = compute_class_weight('balanced', classes=np.unique(y_train), y=y_train)
@@ -281,9 +281,9 @@ class_weights = dict(enumerate(class_weights))
 
 # Model Building
 
-# Il modello inizia con un livello di input definito da tf.keras.Input con una forma specificata da IMG_SHAPE. 
-# Viene applicato un ridimensionamento delle immagini a 224x224 pixel e un'augmentazione dei dati tramite un livello sequenziale che include 
-# operazioni di flip orizzontale e 
+# Il modello inizia con un livello di input definito da tf.keras.Input con una forma specificata da IMG_SHAPE.
+# Viene applicato un ridimensionamento delle immagini a 224x224 pixel e un'augmentazione dei dati tramite un livello sequenziale che include
+# operazioni di flip orizzontale e
 # contrasto casuale. La funzione preprocess_input di MobileNet viene utilizzata per pre-processare i dati di input.
 
 input_layer = tf.keras.Input(shape=IMG_SHAPE, name='universal_input')
@@ -299,21 +299,21 @@ data_augmentation = tf.keras.Sequential([
         tf.keras.layers.RandomRotation(0.2),
         tf.keras.layers.RandomContrast(factor=0.3)
     ], name="augmentation")
-    
+
 preprocess_input = tf.keras.applications.mobilenet.preprocess_input
 
-# Il backbone del modello è MobileNet, pre-addestrato su ImageNet, con i pesi congelati per evitare l'aggiornamento durante l'addestramento iniziale. 
-# Viene creato un modello di base che estrae le caratteristiche fino a un certo livello di MobileNet. 
+# Il backbone del modello è MobileNet, pre-addestrato su ImageNet, con i pesi congelati per evitare l'aggiornamento durante l'addestramento iniziale.
+# Viene creato un modello di base che estrae le caratteristiche fino a un certo livello di MobileNet.
 # Viene aggiunto un livello di attenzione per migliorare l'estrazione delle caratteristiche rilevanti,
-# seguito da una serie di convoluzioni separabili per l'estrazione delle patch. 
-# Un livello di pooling globale e un livello di pre-classificazione con una rete sequenziale vengono aggiunti prima del 
+# seguito da una serie di convoluzioni separabili per l'estrazione delle patch.
+# Un livello di pooling globale e un livello di pre-classificazione con una rete sequenziale vengono aggiunti prima del
 # livello di previsione finale che utilizza una funzione di attivazione softmax per la classificazione.
 
 backbone = tf.keras.applications.mobilenet.MobileNet(input_shape=(224, 224, 3), include_top=False, weights='imagenet')
 backbone.trainable = False
 base_model = tf.keras.Model(backbone.input, backbone.layers[-29].output, name='base_model')
 
-# Il modello viene compilato con l'ottimizzatore Adam e la funzione di perdita sparse_categorical_crossentropy. 
+# Il modello viene compilato con l'ottimizzatore Adam e la funzione di perdita sparse_categorical_crossentropy.
 # Durante l'addestramento, vengono utilizzati callback per l'arresto anticipato e la riduzione del tasso di apprendimento
 # in base alla precisione di validazione. Il modello viene addestrato sui dati di training e validazione, e successivamente valutato sui dati di test.
 
@@ -323,40 +323,40 @@ self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
 #accuracy =  su test set
 
 # patch_extraction = tf.keras.Sequential([
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
-#     tf.keras.layers.BatchNormalization(),  
+#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
+#     tf.keras.layers.BatchNormalization(),
 #     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
-#     tf.keras.layers.BatchNormalization(),  
+#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
+#     tf.keras.layers.BatchNormalization(),
 #     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
 #     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
 # ], name='patch_extraction')
 
-########################## modello iniziale ######################################## 
+########################## modello iniziale ########################################
 # accuracy = 80.33% su test set
 
-# patch_extraction = tf.keras.Sequential([
-    
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
-
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
-
-#     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
-# ], name='patch_extraction')
-
 patch_extraction = tf.keras.Sequential([
-    SeparableConv2DWithReg(256, kernel_size=4, strides=4, padding='same', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
-    SeparableConv2DWithReg(256, kernel_size=2, strides=2, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
+
+    tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
+
+    tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
+
     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
 ], name='patch_extraction')
+
+# patch_extraction = tf.keras.Sequential([
+#     SeparableConv2DWithReg(256, kernel_size=4, strides=4, padding='same', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
+#     SeparableConv2DWithReg(256, kernel_size=2, strides=2, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
+#     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
+# ], name='patch_extraction')
 
 ########################## modello con dropout ma senza batch ######################
 
 # accuracy = 79% su test set
 # patch_extraction = tf.keras.Sequential([
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
+#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
 #     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
+#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
 #     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
 #     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
 # ], name='patch_extraction')
@@ -366,9 +366,9 @@ patch_extraction = tf.keras.Sequential([
 
 global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name='gap')
 pre_classification = tf.keras.Sequential([
-    tf.keras.layers.Dense(best_hps['units'], activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])), 
-    tf.keras.layers.BatchNormalization(),  
-    tf.keras.layers.Dropout(dropout_rate)  # Aggiungi dropout
+    tf.keras.layers.Dense(best_hps['units'], activation='relu', kernel_regularizer=l2(best_hps['l2_reg_2'])),
+    tf.keras.layers.BatchNormalization(),
+    tf.keras.layers.Dropout(best_hps['dropout_rate'])  # Aggiungi dropout
 ], name='pre_classification')
 
 prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="softmax", name='classification_head')
@@ -385,7 +385,7 @@ x = global_average_layer(x)
 x = tf.keras.layers.Dropout(TRAIN_DROPOUT)(x)
 x = pre_classification(x)
 # Usa il nuovo livello nel tuo modello
-x = ExpandDimsLayer(axis=1)(x)  # Aggiungi una dimensione di sequenza 
+x = ExpandDimsLayer(axis=1)(x)  # Aggiungi una dimensione di sequenza
 x = self_attention([x, x])
 # Usa il nuovo livello nel tuo modello
 x = SqueezeLayer(axis=1)(x)  # Rimuovi la dimensione di sequenza dopo l'attenzione
@@ -407,34 +407,43 @@ outputs = prediction_layer(x)
 
 ####################################################################################
 
-# Si sta utilizzando MobileNet come backbone e aggiungendo ulteriori livelli per adattarlo al task specifico 
+# Si sta utilizzando MobileNet come backbone e aggiungendo ulteriori livelli per adattarlo al task specifico
 # (classificazione delle espressioni facciali nel dataset CK+).
-# Durante l'addestramento iniziale, si sta addestrando solo i nuovi livelli aggiunti, 
+# Durante l'addestramento iniziale, si sta addestrando solo i nuovi livelli aggiunti,
 # mentre i pesi di MobileNet rimangono congelati (non vengono aggiornati).
-# L'accuratezza che si ottiene dopo questo addestramento iniziale riflette le prestazioni del modello 
+# L'accuratezza che si ottiene dopo questo addestramento iniziale riflette le prestazioni del modello
 # sui dati di training e validation del dataset CK+.
 
 model = tf.keras.Model(inputs, outputs, name='train-head')
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=TRAIN_LR, global_clipnorm=3.0), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+
 # Training Procedure
+
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=TRAIN_ES_PATIENCE, min_delta=ES_LR_MIN_DELTA, restore_best_weights=True)
 learning_rate_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_accuracy', patience=TRAIN_LR_PATIENCE, verbose=0, min_delta=ES_LR_MIN_DELTA, min_lr=TRAIN_MIN_LR)
-history = model.fit(X_train, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid, y_valid), verbose=0, 
+history = model.fit(X_train, y_train, epochs=TRAIN_EPOCH, batch_size=BATCH_SIZE, validation_data=(X_valid, y_valid), verbose=0,
                     class_weight=class_weights, callbacks=[early_stopping_callback, learning_rate_callback])
 test_loss, test_acc = model.evaluate(X_test, y_test)
 
 print(f"Test Accuracy: {test_acc}")
 
+# Salva i pesi del modello addestrato nella fase iniziale
+initial_weights_path = os.path.join("initial_weights", dataset_name, "initial_model.weights.h5")
+os.makedirs(os.path.dirname(initial_weights_path), exist_ok=True)
+model.save_weights(initial_weights_path)
+
+print(f"Pesi del modello iniziale salvati in: {initial_weights_path}")
+
 # Model Finetuning
 
-# Dopo l'addestramento iniziale, il modello viene affinato. Viene sbloccata una parte del backbone di MobileNet per consentire l'addestramento 
-# fine-tuning, mantenendo congelati i livelli di BatchNormalization. 
-# Viene ricostruito il modello con dropout spaziale e regolare per prevenire l'overfitting. 
+# Dopo l'addestramento iniziale, il modello viene affinato. Viene sbloccata una parte del backbone di MobileNet per consentire l'addestramento
+# fine-tuning, mantenendo congelati i livelli di BatchNormalization.
+# Viene ricostruito il modello con dropout spaziale e regolare per prevenire l'overfitting.
 # Il modello viene nuovamente compilato e addestrato con callback aggiuntivi per il monitoraggio del tasso di apprendimento e il
 # logging con TensorBoard. Infine, il modello affinato viene valutato sui dati di test e salvato su disco.
 
 # Quindi, si sblocca una parte del backbone di MobileNet per consentire l'addestramento (fine-tuning).
-# Durante il fine-tuning, i pesi di MobileNet vengono aggiornati insieme ai nuovi livelli aggiunti, 
+# Durante il fine-tuning, i pesi di MobileNet vengono aggiornati insieme ai nuovi livelli aggiunti,
 # permettendo al modello di adattarsi meglio alle caratteristiche specifiche del dataset.
 
 print("\nFinetuning ...")
@@ -447,6 +456,28 @@ for layer in base_model.layers[fine_tune_from:]:
     if isinstance(layer, tf.keras.layers.BatchNormalization):
         layer.trainable = False
 
+
+# Carica i pesi del modello addestrato nella fase iniziale
+model.load_weights(initial_weights_path)
+print(f"Pesi del modello iniziale caricati da: {initial_weights_path}")
+
+patch_extraction = tf.keras.Sequential([
+
+    tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
+
+    tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
+
+    tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg_fine_tuning']))
+], name='patch_extraction')
+
+global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name='gap')
+pre_classification = tf.keras.Sequential([
+    tf.keras.layers.Dense(int(best_hps['units_ft']), activation='relu', kernel_regularizer=l2(best_hps['l2_reg_FT'])),
+    tf.keras.layers.BatchNormalization(),
+    tf.keras.layers.Dropout(best_hps['dropout_rate_FT'])  # Aggiungi dropout
+], name='pre_classification')
+
+prediction_layer = tf.keras.layers.Dense(NUM_CLASSES, activation="softmax", name='classification_head')
 ################################## MIO CODICE ########################################
 inputs = input_layer
 x = sample_resizing(inputs)
@@ -482,7 +513,7 @@ early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy', m
 scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
 
 # Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints/PROVA_2", dataset_name)
+checkpoint_dir = os.path.join("checkpoints/PROVA_BEST_PARAMETERS", dataset_name)
 
 
 # Callback per salvare i pesi del modello ogni 20 epoche
@@ -501,19 +532,19 @@ if latest_checkpoint:
 
 # Continua l'addestramento
 history_finetune = model.fit(
-    X_train, y_train, 
-    epochs=FT_EPOCH, 
-    batch_size=BATCH_SIZE, 
-    validation_data=(X_valid, y_valid), 
-    verbose=1, 
-    initial_epoch=history.epoch[-TRAIN_ES_PATIENCE], 
+    X_train, y_train,
+    epochs=FT_EPOCH,
+    batch_size=BATCH_SIZE_FT,
+    validation_data=(X_valid, y_valid),
+    verbose=1,
+    initial_epoch=history.epoch[-TRAIN_ES_PATIENCE],
     callbacks=[early_stopping_callback, scheduler_callback, tensorboard_callback, checkpoint_callback]
 )
 
 test_loss, test_acc = model.evaluate(X_test, y_test)
 
 # Create directory for saving the final model
-final_model_dir = os.path.join("final_models/PROVA_2", dataset_name)
+final_model_dir = os.path.join("final_models/PROVA_BEST_PARAMETERS", dataset_name)
 
 # Creazione della directory unica per i risultati
 base_dir = final_model_dir
@@ -545,13 +576,14 @@ print(f"Numero di predizioni sbagliate: {incorrect_predictions}")
 accuracy = correct_predictions / len(y_test)
 print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
+
 # Create directory for saving plots
-results_dir = os.path.join("results/PROVA_2", dataset_name)
+results_dir = os.path.join("results/PROVA_BEST_PARAMETERS", dataset_name)
 
 # Calcola la matrice di confusione
 cm = confusion_matrix(y_test, y_pred)
 
-# Visualizza e salva la matrice di confusione con etichette    
+# Visualizza e salva la matrice di confusione con etichette
 if 'RAFDB' in dataset_name:
     classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 elif 'FERP' in dataset_name:
@@ -612,8 +644,8 @@ plt.title('Training and Validation Loss')
 plt.savefig(os.path.join(unique_dir, 'training_validation_plots.png'))
 plt.show()
 
-# L'accuratezza che si ottiene prima del fine-tuning è quella del  modello addestrato sui dati del dataset analizzato, 
-# utilizzando MobileNet come backbone pre-addestrato. 
+# L'accuratezza che si ottiene prima del fine-tuning è quella del  modello addestrato sui dati del dataset analizzato,
+# utilizzando MobileNet come backbone pre-addestrato.
 # Il fine-tuning permette di migliorare ulteriormente le prestazioni del modello adattandolo meglio alle caratteristiche specifiche del  dataset.
 
 
