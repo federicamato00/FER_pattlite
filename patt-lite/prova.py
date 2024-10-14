@@ -8,10 +8,23 @@ import tensorflow as tf
 from sklearn.metrics import accuracy_score, classification_report, confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 import os
+from sklearn.metrics import f1_score, precision_score, recall_score, roc_auc_score
 from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.layers import Layer
+
+
+class LearningRateLogger(tf.keras.callbacks.Callback):
+    def __init__(self):
+        super(LearningRateLogger, self).__init__()
+        self.learning_rates = []
+
+    def on_epoch_end(self, epoch, logs=None):
+        lr = self.model.optimizer.learning_rate
+        if isinstance(lr, tf.keras.optimizers.schedules.LearningRateSchedule):
+            lr = lr(epoch)
+        self.learning_rates.append(float(lr.numpy()))
 
 class SeparableConv2DWithReg(tf.keras.layers.Layer):
     def __init__(self, filters, kernel_size, strides=(1, 1), padding='valid', activation=None, kernel_regularizer=None, **kwargs):
@@ -418,6 +431,10 @@ model = tf.keras.Model(inputs, outputs, name='train-head')
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=TRAIN_LR, global_clipnorm=3.0), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
 # Training Procedure
+# Il motivo per cui lo scheduler_callback non viene utilizzato nella fase di addestramento iniziale potrebbe 
+# essere che si desidera mantenere un learning rate costante durante questa fase iniziale. 
+# L'uso di un learning rate scheduler come il Cosine Annealing è spesso più utile durante la fase di 
+# fine-tuning, quando si vuole ridurre gradualmente il learning rate per migliorare la convergenza del modello.
 
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=TRAIN_ES_PATIENCE, min_delta=ES_LR_MIN_DELTA, restore_best_weights=True)
 learning_rate_callback = tf.keras.callbacks.ReduceLROnPlateau(monitor='val_accuracy', patience=TRAIN_LR_PATIENCE, verbose=0, min_delta=ES_LR_MIN_DELTA, min_lr=TRAIN_MIN_LR)
@@ -502,8 +519,16 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=FT_LR, global_cli
 
 # Definisci la funzione di schedule
 # Definisci la funzione di Cosine Annealing
+# Cosine Annealing is a type of learning rate schedule that has the effect of starting with a large learning rate that is 
+# relatively rapidly decreased to a minimum value before being increased rapidly again. The resetting of the learning rate 
+# acts like a simulated restart of the learning process and the re-use of good weights as the starting point of the restart 
+# is referred to as a "warm restart" in contrast to a "cold restart" where a new set of small random numbers may be used as 
+# a starting point.
+# The cosine annealing schedule is calculated as follows:
 def schedule(epoch, lr):
-    return 0.5 * (1 + np.cos(np.pi * epoch / FT_EPOCH)) * FT_LR
+    lr = 0.5 * (1 + np.cos(np.pi * epoch / FT_EPOCH)) * FT_LR
+    return lr
+
 
 
 # Definisci i callback
@@ -511,9 +536,10 @@ log_dir = "logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy', min_delta=ES_LR_MIN_DELTA, patience=FT_ES_PATIENCE, restore_best_weights=True)
 scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
+learning_rate_logger = LearningRateLogger()
 
 # Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints/PROVA_BEST_PARAMETERS", dataset_name)
+checkpoint_dir = os.path.join("checkpoints/PROVA_BEST_PARAMETERS_NUOVI", dataset_name)
 
 
 # Callback per salvare i pesi del modello ogni 20 epoche
@@ -538,7 +564,7 @@ history_finetune = model.fit(
     validation_data=(X_valid, y_valid),
     verbose=1,
     initial_epoch=history.epoch[-TRAIN_ES_PATIENCE],
-    callbacks=[early_stopping_callback, scheduler_callback, tensorboard_callback, checkpoint_callback]
+    callbacks=[early_stopping_callback, scheduler_callback, tensorboard_callback, checkpoint_callback, learning_rate_logger]
 )
 
 test_loss, test_acc = model.evaluate(X_test, y_test)
@@ -679,3 +705,42 @@ params = {
 save_parameters(params, unique_dir)
 print(f"Directory creata: {unique_dir}")
 print(f"Parametri salvati in: {os.path.join(unique_dir, 'parameters.txt')}")
+
+
+
+plt.plot(learning_rate_logger.learning_rates)
+plt.xlabel('Epoch')
+plt.ylabel('Learning Rate')
+plt.title('Learning Rate Schedule')
+plt.savefig(os.path.join(unique_dir, 'learning_rate_schedule.png'))
+plt.show()
+
+
+# Salva le metriche in un file
+metrics_path = os.path.join(unique_dir, 'training_metrics.txt')
+with open(metrics_path, 'w') as f:
+    for epoch in range(len(train_accuracy)):
+        f.write(f"Epoch {epoch+1}\n")
+        f.write(f"Train Accuracy: {train_accuracy[epoch]}\n")
+        f.write(f"Validation Accuracy: {val_accuracy[epoch]}\n")
+        f.write(f"Train Loss: {train_loss[epoch]}\n")
+        f.write(f"Validation Loss: {val_loss[epoch]}\n")
+        f.write("\n")
+
+# Calcola ulteriori metriche
+y_pred_prob = model.predict(X_test)
+y_pred = np.argmax(y_pred_prob, axis=1)
+
+f1 = f1_score(y_test, y_pred, average='weighted')
+precision = precision_score(y_test, y_pred, average='weighted')
+recall = recall_score(y_test, y_pred, average='weighted')
+auc_roc = roc_auc_score(y_test, y_pred_prob, multi_class='ovr')
+
+# Salva le ulteriori metriche in un file
+additional_metrics_path = os.path.join(unique_dir, 'additional_metrics.txt')
+with open(additional_metrics_path, 'w') as f:
+    f.write(f"F1 Score: {f1}\n")
+    f.write(f"Precision: {precision}\n")
+    f.write(f"Recall: {recall}\n")
+    f.write(f"AUC-ROC: {auc_roc}\n")
+

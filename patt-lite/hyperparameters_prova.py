@@ -6,14 +6,15 @@ import os
 import h5py
 import numpy as np
 from sklearn.utils.class_weight import compute_class_weight
+from sklearn.utils import shuffle
 
-NUM_CLASSES = 8
+NUM_CLASSES = 7
 IMG_SHAPE = (120, 120, 3)
-dataset_name = 'CK+'
+dataset_name = 'Bosphorus'
 # Caricamento dati
-file_output = os.path.join('datasets', dataset_name, 'ckplus_data_augmentation_3.h5')
+file_output = os.path.join('datasets', dataset_name, 'bosphorus_data_augmentation.h5')
 best_path_save = dataset_name + '_hyperparameters'
-best_path = os.path.join(best_path_save, 'ckplus_data_augmentation_hyperparameters_3.txt')
+best_path = os.path.join(best_path_save, 'bosphorus_data_augmentation_hyperparameters.txt')
 if not os.path.exists(best_path_save):
     os.makedirs(best_path_save)
 
@@ -25,6 +26,11 @@ with h5py.File(file_output, 'r') as f:
     X_test = np.array(f['X_test'])
     y_test = np.array(f['y_test'])
 
+
+X_train,y_train = shuffle(X_train,y_train,random_state=42)
+X_valid,y_valid = shuffle(X_valid,y_valid,random_state=42)
+X_test,y_test = shuffle(X_test,y_test,random_state=42)
+
 class PattLiteHyperModel(HyperModel):
     def __init__(self, IMG_SHAPE, NUM_CLASSES):
         self.IMG_SHAPE = IMG_SHAPE
@@ -32,7 +38,7 @@ class PattLiteHyperModel(HyperModel):
 
     def build(self, hp):
         input_layer = tf.keras.Input(shape=self.IMG_SHAPE, name='universal_input')
-        batch_size = hp.Choice('BATCH_SIZE', [16, 32, 64])
+        batch_size = hp.Choice('BATCH_SIZE', [8, 16, 32, 64])
         
         sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
         data_augmentation = tf.keras.Sequential([
@@ -81,7 +87,7 @@ class PattLiteHyperModel(HyperModel):
         
         model = tf.keras.Model(inputs, outputs, name='train-head')
         model.compile(optimizer=tf.keras.optimizers.Adam(
-                          learning_rate=hp.Float('TRAIN_LR', min_value=1e-4, max_value=1e-2, sampling='LOG')),
+                          learning_rate=hp.Float('TRAIN_LR', min_value=1e-4, max_value=1e-2, sampling='LOG')), ######provare a mettere min_value a 1e-6
                       loss='sparse_categorical_crossentropy', 
                       metrics=['accuracy'])
         
@@ -97,7 +103,7 @@ class PattLiteFineTuneHyperModel(HyperModel):
 
     def build(self, hp):
         self.base_model.trainable = True
-        batch_size = hp.Choice('BATCH_SIZE_FT', [16, 32, 64])
+        batch_size = hp.Choice('BATCH_SIZE_FT', [8, 16, 32, 64])
         fine_tune_from = len(self.base_model.layers) - self.unfreeze
         for layer in self.base_model.layers[:fine_tune_from]:
             layer.trainable = False
@@ -158,7 +164,7 @@ backbone.trainable = False
 base_model = tf.keras.Model(backbone.input, backbone.layers[-29].output, name='base_model')
 
 tuner_train = RandomSearch(
-    PattLiteHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=8),
+    PattLiteHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=7),
     objective='val_accuracy',
     max_trials=20,
     executions_per_trial=1,
@@ -182,7 +188,7 @@ best_train_hp = tuner_train.get_best_hyperparameters(num_trials=1)[0]
 
 # Utilizzare il miglior modello trovato per il fine-tuning
 tuner_finetune = RandomSearch(
-    PattLiteFineTuneHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=8, base_model=best_train_model, unfreeze=59),
+    PattLiteFineTuneHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=7, base_model=best_train_model, unfreeze=59),
     objective='val_accuracy',
     max_trials=20,
     executions_per_trial=1,
