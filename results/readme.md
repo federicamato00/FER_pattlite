@@ -80,17 +80,7 @@ Per prima cosa, si è proceduto a modificare il codice originale apportando le s
 
 Il codice nuovo è più complesso e include tecniche di regolarizzazione (L2 e Dropout) che possono aiutare a migliorare la generalizzazione del modello e prevenire l'overfitting. Inoltre, il numero di unità nel livello Dense, così come altri parametri, è ottimizzato tramite una ricerca di iperparametri, il che può portare a una migliore performance complessiva del modello.
 
-3. Una volta cercati questi parametri, si sono effettuate nuovamente delle prove sul nuovo modello con i nuovi parametri.
-I risultati di tale analisi sono presenti nella cartella sotto il nome di [WithoutProcessing_BestParameters/Bosphorus](./WithoutProcessing_BestParameters/Bosphorus) e [WithoutProcessing_BestParameters/CK+](./WithoutProcessing_BestParameters/CK+).
-
-Da quest'analisi, che ha visto effettuare diverse prove con diversi BATCH_SIZE sia per la fase di training iniziale che per la fase di finetuning, si sono ottenute le seguenti considerazioni:
-
-- Bosphorus: i risultati più promettenti appartengono alle prove con BATCH_SIZE 16 E FT_BATCH_SIZE 32, che si distingue per un buon equilibrio tra accuratezza e perdita, sia sui dati di training che di validation, suggerendo una buona capacità di generalizzazione e un rischio di overfitting contenuto, e con BATCH_SIZE 8 E FT_BATCH_SIZE 64, il cui modello presenta la perdita più bassa sul test set, indicando una potenziale maggiore precisione nelle previsioni. Sulla base dei risultati presentati, **il modello BATCH_SIZE 16 E FT_BATCH_SIZE 32 sembra essere un ottimo candidato** per un ulteriore approfondimento.
-
-- CK+: i risultati più promettenti appartengono alle prove con CK+ TR BATCH 64 E FT BATCH 16 (94.62%), che si distingue per un buon equilibrio tra accuratezza e perdita, sia sui dati di training che di validation. Ciò suggerisce una buona capacità di generalizzazione e un rischio di overfitting contenuto. Anche CK+ TR BATCH 32 E FT BATCH 32 (94.62%) presenta la perdita più bassa sul test set, indicando una potenziale maggiore precisione nelle previsioni.  Sulla base dei risultati presentati, **il modello CK+ TR BATCH 64 E FT BATCH 16 sembra essere un ottimo candidato** per un ulteriore approfondimento.
-
-
-4. Per cercare di migliorare l'accuratezza del modello, si è inoltre cercato di lavorare sui dataset andando a valutare se le emozioni  fossero sbilanciate, i risultati di questa analisi hanno evidenziato come le varie classi sono sbilanciate tra loro per i dataset considerati, per cui si è preso in considerazione anche l'idea di bilanciare il numero di dati a disposizione utilizzando tecniche di augmentation, in particolare:
+3. Per cercare di migliorare l'accuratezza del modello, si è inoltre cercato di lavorare sui dataset andando a valutare se le emozioni  fossero sbilanciate, i risultati di questa analisi hanno evidenziato come le varie classi sono sbilanciate tra loro per i dataset considerati, per cui si è preso in considerazione anche l'idea di bilanciare il numero di dati a disposizione utilizzando tecniche di augmentation, in particolare:
 
     * iaa.Fliplr(0.5): Applica un flip orizzontale alle immagini con una probabilità del 50%. Questo significa che metà delle immagini saranno capovolte orizzontalmente.
     * iaa.Affine(rotate=(-20, 20)): Applica una rotazione affine alle immagini. Le immagini possono essere ruotate di un angolo casuale compreso tra -20 e 20 gradi.
@@ -100,6 +90,16 @@ Da quest'analisi, che ha visto effettuare diverse prove con diversi BATCH_SIZE s
 Tali risultati sono stati salvati sotto il nome di processed_datasetname.h5.
 Inoltre, si è valutata anche la possibilità di poter ampliare ancora il dataset con altre immagini (con ulteriori 100 immagini), per cui una seconda prova è stata effettuata aggiungendo ulteriormente immagini, seguendo il processo di data augmentation descritto precedentemente. Questi risultati sono stati salvati sotto il nome di processed_datasetname_5.h5. 
 Per questi ulteriori due modelli si è proceduto alla ricerca dei migliori iperparametri come descritto precedentemente. 
+
+4. Una volta cercati questi parametri, si sono effettuate nuovamente delle prove sul nuovo modello con i nuovi parametri.
+I risultati di tale analisi sono presenti nella cartella sotto il nome di [Processed_no_augmentation_BestParameters/Bosphorus](./Processed_no_augmentation_BestParameters/Bosphorus) e [Processed_no_augmentation_BestParameters/CK+](./Processed_no_augmentation_BestParameters/CK+).
+
+Da quest'analisi, che ha visto effettuare diverse prove con diversi BATCH_SIZE sia per la fase di training iniziale che per la fase di finetuning, si sono ottenute le seguenti considerazioni:
+
+- Bosphorus: i risultati più promettenti appartengono alle prove con BATCH_SIZE 16 E FT_BATCH_SIZE 32, che si distingue per un buon equilibrio tra accuratezza e perdita, sia sui dati di training che di validation, suggerendo una buona capacità di generalizzazione e un rischio di overfitting contenuto, e con BATCH_SIZE 8 E FT_BATCH_SIZE 64, il cui modello presenta la perdita più bassa sul test set, indicando una potenziale maggiore precisione nelle previsioni. Sulla base dei risultati presentati, **il modello BATCH_SIZE 16 E FT_BATCH_SIZE 32 sembra essere un ottimo candidato** per un ulteriore approfondimento.
+
+- CK+: i risultati più promettenti appartengono alle prove con CK+ TR BATCH 64 E FT BATCH 16 (94.62%), che si distingue per un buon equilibrio tra accuratezza e perdita, sia sui dati di training che di validation. Ciò suggerisce una buona capacità di generalizzazione e un rischio di overfitting contenuto. Anche CK+ TR BATCH 32 E FT BATCH 32 (94.62%) presenta la perdita più bassa sul test set, indicando una potenziale maggiore precisione nelle previsioni.  Sulla base dei risultati presentati, **il modello CK+ TR BATCH 64 E FT BATCH 16 sembra essere un ottimo candidato** per un ulteriore approfondimento.
+
 
 5. In seguito, si è tentato ancora di migliorare i risultati, lavorando sulle immagini in maniera tale da rendere più facile al modello riconoscere i pattern dei volti e facilizzarne l'apprendimento, riducendo quanto più possibile le "immagini difficili" che il modello non riesce a predire. A tal proposito, è stato usato il codice presente in [classify](../patt-lite/classify.py) che lavora come segue:
 
@@ -118,5 +118,5 @@ Restituisce i migliori parametri trovati, la migliore accuratezza e il numero mi
     - processed_bosphorus.h5 con best parameters:
 
 * CK+:
-    - processed_ckplus_5.h5 con best parameters: ha ottenuto un accuraci del 100% con **BATCH_SIZE 16 E FT_BATCH_SIZE 16**. Questo modello presenta un ottimo equilibrio tra accuratezza, perdita e overfitting. Ha un'accuratezza molto elevata (1.0) e una perdita bassa, senza segni evidenti di overfitting. **BATCH_SIZE 8 E FT_BATCH_SIZE 16** (99.65%) ha un'accuratezza leggermente inferiore rispetto al precedente, ma presenta comunque ottime prestazioni. La perdita è bassa e il rischio di overfitting sembra contenuto.
+    - processed_ckplus_5.h5 con best parameters: ha ottenuto un accuracY del 100% con **BATCH_SIZE 16 E FT_BATCH_SIZE 16**. Questo modello presenta un ottimo equilibrio tra accuratezza, perdita e overfitting. Ha un'accuratezza molto elevata (1.0) e una perdita bassa, senza segni evidenti di overfitting. **BATCH_SIZE 8 E FT_BATCH_SIZE 16** (99.65%) ha un'accuratezza leggermente inferiore rispetto al precedente, ma presenta comunque ottime prestazioni. La perdita è bassa e il rischio di overfitting sembra contenuto.
     - processed_ckplus.h5 con best parameters: 
