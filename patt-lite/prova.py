@@ -1,6 +1,7 @@
 
 import datetime
 import keras
+import json
 import numpy as np
 import h5py
 from sklearn.utils import compute_class_weight, shuffle
@@ -13,7 +14,8 @@ from tensorflow.keras.preprocessing.image import ImageDataGenerator
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from tensorflow.keras.layers import Layer
-
+from sklearn.metrics import roc_curve, auc
+from sklearn.preprocessing import label_binarize
 
 class LearningRateLogger(tf.keras.callbacks.Callback):
     def __init__(self):
@@ -103,12 +105,17 @@ def save_parameters(params, directory, filename="parameters.txt"):
 
 
 ############ modello con batch normalization prima di drop in patch extraction
-dataset_name='Bosphorus'
-best_path = dataset_name + '_hyperparameters'
-# best_path = 'ckplus_hyperparameters'
-# best_path = 'bu_3dfe_hyperparameters'
+dataset_name='CK+'
 
-best_file = dataset_name.lower() + '_data_augmentation_hyperparameters_5.txt'
+best_path = dataset_name  + '_hyperparameters_numClasses7'
+if os.path.exists(best_path):
+    print(f"La directory '{best_path}' esiste.")
+else:
+    print(f"La directory '{best_path}' non esiste.")
+    os.makedirs(best_path)
+
+
+best_file = dataset_name.lower() + '_hyperparameters.txt'
 # best_file = dataset_name.lower()+'_data_augmentation_hyperparameters.txt'
 # best_file = dataset_name.lower()+'_data_augmentation_hyperparameters_2.txt'
 # best_file = dataset_name.lower()+'_data_augmentation_hyperparameters_3.txt'
@@ -147,7 +154,7 @@ class SqueezeLayer(Layer):
 # Parametri
 NUM_CLASSES = 7
 IMG_SHAPE = (120, 120, 3)
-BATCH_SIZE = int(best_hps['BATCH_SIZE']) 
+BATCH_SIZE = 64 #int(best_hps['BATCH_SIZE'])p
 
 TRAIN_EPOCH = 100
 TRAIN_LR = best_hps['TRAIN_LR']
@@ -165,21 +172,21 @@ FT_LR_DECAY_RATE = 1.0 #era a 1 ma ho messo 0.5
 # Epochs successive: Se l'epoca corrente è maggiore o uguale a FT_LR_DECAY_STEP,
 # la funzione riduce il learning rate moltiplicandolo per 0.5. Questo significa che il
 # learning rate viene dimezzato per rendere l'addestramento più fine e stabile nelle fasi successive.
-BATCH_SIZE_FT = int(best_hps['BATCH_SIZE_FT'])
-FT_ES_PATIENCE = 40 #numero di epoche di tolleranza per l'arresto anticipato, aumentato da 20 a 40
+BATCH_SIZE_FT = 64
+FT_ES_PATIENCE = 190 #numero di epoche di tolleranza per l'arresto anticipato, aumentato da 20 a 40
 FT_DROPOUT = best_hps['FT_DROPOUT']
 dropout_rate = best_hps['dropout_rate_FT']
 
 ES_LR_MIN_DELTA = 0.003 #quantità minima di cambiamento per considerare un miglioramento
 
-
-
+new_folder = dataset_name + f"_TRBATCH{BATCH_SIZE}_FT_BATCH{BATCH_SIZE_FT}"
 
 # Funzione per caricare le immagini e le etichette
-def load_images_and_labels(file_path):
+def load_images_and_labels(file_path,save_path):
     with h5py.File(file_path, 'r') as f:
 
-        if file_path=='processed_bosphorus_5.h5':
+        if save_path=='processed_bosphorus_5.h5' or save_path == 'processed_cklus_5.h5':
+
             X_train = np.array(f['X_train'])
             y_train = np.array(f['y_train'])
             X_test = np.array(f['X_test'])
@@ -200,9 +207,10 @@ def resize_images(X, target_size=(120, 120)):
     return np.array([tf.image.resize(image, target_size).numpy() for image in X])
 
 # Carica le immagini
-path_easy = 'datasets/preprocessing/Bosphorus/SMOTE'
-
-X_train, y_train , X_valid, y_valid, X_test, y_test= load_images_and_labels( 'processed_bosphorus_5.h5')
+name_folder = dataset_name + '_processed_numClasses7'
+path_easy = os.path.join(name_folder,'ckplus.h5' )
+save_path = 'ckplus.h5'
+X_train, y_train , X_valid, y_valid, X_test, y_test= load_images_and_labels( path_easy,save_path)
 
 # Ridimensiona le immagini difficili
 
@@ -220,10 +228,21 @@ assert X_valid.size > 0, "X_valid è vuoto"
 assert y_valid.size > 0, "y_valid è vuoto"
 assert X_test.size > 0, "X_test è vuoto"
 assert y_test.size > 0, "y_test è vuoto"
+# Visualizza e salva la matrice di confusione con etichette
+if 'RAFDB' in dataset_name:
+    classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
+elif 'FERP' in dataset_name:
+    classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
+elif 'JAFFE' in dataset_name:
+    classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
+elif 'Bosphorus' in dataset_name:
+    classNames = ['anger', 'disgust', 'fear', 'happiness', 'sadness', 'surprise','neutral']
+elif 'CK+' in dataset_name:
+    classNames = ['neutral', 'anger', 'disgust', 'fear', 'happy', 'sadness', 'surprise'] ### 7 classi
+else:
+    classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
-# Esempio di utilizzo
-class_names = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
-plot_class_distribution(y_train, y_valid, y_test, class_names)
+plot_class_distribution(y_train, y_valid, y_test, classNames)
 
 # # Carica le immagini preprocessate
 # def load_preprocessed_data(file_path):
@@ -235,7 +254,7 @@ plot_class_distribution(y_train, y_valid, y_test, class_names)
 # Percorsi ai file preprocessati
 ### Bosphorus ###
 
-save_path = 'bosphorus_data_augmentation_5.h5'
+#save_path = 'bosphorus_data_augmentation_5.h5'
 # save_path = 'bosphorus_data_augmentation.h5'
 # save_path = 'bosphorus_data_augmentation_2.h5'
 # save_path = 'bosphorus_data_augmentation_3.h5'
@@ -246,7 +265,7 @@ save_path = 'bosphorus_data_augmentation_5.h5'
 # save_path = 'ckplus_data_augmentation_1.h5'
 # save_path = 'ckplus_data_augmentation_2.h5'
 # save_path = 'ckplus_data_augmentation_3.h5'
-# save_path = 'ckplus_data_augmentation_5.h5'
+save_path = 'ckplus_data_augmentation_5.h5'
 
 ### BU_3DFE ###
 # save_path = 'bu_3dfe_data_augmentation.h5'
@@ -259,7 +278,7 @@ dataset_file_path = os.path.join('datasets', dataset_name, save_path)
 # test_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'test.h5')
 
 # # Carica i dati preprocessati
-X_train_original, y_train_original, X_valid_original, y_valid_original, X_test_original, y_test_original = load_images_and_labels(dataset_file_path)
+# X_train_original, y_train_original, X_valid_original, y_valid_original, X_test_original, y_test_original = load_images_and_labels(dataset_file_path,save_path)
 # X_valid_preprocessed, y_valid_preprocessed = load_preprocessed_data(valid_file_path)
 # X_test_preprocessed, y_test_preprocessed = load_preprocessed_data(test_file_path)
 
@@ -281,7 +300,7 @@ def visualize_images(original_images,preprocessed_images, path_name, num_images=
     plt.show()
 
 # Esempio di utilizzo
-visualize_images(X_train_original[:5],X_train[:5],save_path)
+# visualize_images(X_train_original[:5],X_train[:5],save_path)
 
 # Load your data here, PAtt-Lite was trained with h5py for shorter loading time
 X_train, y_train = shuffle(X_train, y_train)
@@ -431,9 +450,9 @@ model = tf.keras.Model(inputs, outputs, name='train-head')
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=TRAIN_LR, global_clipnorm=3.0), loss='sparse_categorical_crossentropy', metrics=['accuracy'])
 
 # Training Procedure
-# Il motivo per cui lo scheduler_callback non viene utilizzato nella fase di addestramento iniziale potrebbe 
-# essere che si desidera mantenere un learning rate costante durante questa fase iniziale. 
-# L'uso di un learning rate scheduler come il Cosine Annealing è spesso più utile durante la fase di 
+# Il motivo per cui lo scheduler_callback non viene utilizzato nella fase di addestramento iniziale potrebbe
+# essere che si desidera mantenere un learning rate costante durante questa fase iniziale.
+# L'uso di un learning rate scheduler come il Cosine Annealing è spesso più utile durante la fase di
 # fine-tuning, quando si vuole ridurre gradualmente il learning rate per migliorare la convergenza del modello.
 
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=TRAIN_ES_PATIENCE, min_delta=ES_LR_MIN_DELTA, restore_best_weights=True)
@@ -519,10 +538,10 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=FT_LR, global_cli
 
 # Definisci la funzione di schedule
 # Definisci la funzione di Cosine Annealing
-# Cosine Annealing is a type of learning rate schedule that has the effect of starting with a large learning rate that is 
-# relatively rapidly decreased to a minimum value before being increased rapidly again. The resetting of the learning rate 
-# acts like a simulated restart of the learning process and the re-use of good weights as the starting point of the restart 
-# is referred to as a "warm restart" in contrast to a "cold restart" where a new set of small random numbers may be used as 
+# Cosine Annealing is a type of learning rate schedule that has the effect of starting with a large learning rate that is
+# relatively rapidly decreased to a minimum value before being increased rapidly again. The resetting of the learning rate
+# acts like a simulated restart of the learning process and the re-use of good weights as the starting point of the restart
+# is referred to as a "warm restart" in contrast to a "cold restart" where a new set of small random numbers may be used as
 # a starting point.
 # The cosine annealing schedule is calculated as follows:
 def schedule(epoch, lr):
@@ -539,7 +558,7 @@ scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
 learning_rate_logger = LearningRateLogger()
 
 # Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints/PROVA_BEST_PARAMETERS_NUOVI", dataset_name)
+checkpoint_dir = os.path.join("checkpoints/BEST_PARAMETERS_NUOVO", new_folder)
 
 
 # Callback per salvare i pesi del modello ogni 20 epoche
@@ -569,8 +588,10 @@ history_finetune = model.fit(
 
 test_loss, test_acc = model.evaluate(X_test, y_test)
 
+
+
 # Create directory for saving the final model
-final_model_dir = os.path.join("final_models/PROVA_BEST_PARAMETERS", dataset_name)
+final_model_dir = os.path.join("final_models",dataset_name,'ck+_withoutprocessing_best_parameters', new_folder)
 
 # Creazione della directory unica per i risultati
 base_dir = final_model_dir
@@ -578,7 +599,7 @@ unique_dir = create_unique_directory(base_dir)
 
 
 # Save the model in the specified directory with .keras extension
-model_name = os.path.join(unique_dir, f"{dataset_name}_model.keras")
+model_name = os.path.join(unique_dir, f"{new_folder}_model.keras")
 model.save(model_name)
 
 print(f"Modello salvato in: {model_name}")
@@ -604,7 +625,8 @@ print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
 
 # Create directory for saving plots
-results_dir = os.path.join("results/PROVA_BEST_PARAMETERS", dataset_name)
+
+results_dir = os.path.join("results",dataset_name,'ck+_withoutprocessing_best_parameters', new_folder)
 
 # Calcola la matrice di confusione
 cm = confusion_matrix(y_test, y_pred)
@@ -619,7 +641,7 @@ elif 'JAFFE' in dataset_name:
 elif 'Bosphorus' in dataset_name:
     classNames = ['anger', 'disgust', 'fear', 'happiness', 'sadness', 'surprise','neutral']
 elif 'CK+' in dataset_name:
-    classNames = ['anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness', 'surprise']
+    classNames = ['neutral', 'anger', 'disgust', 'fear', 'happy', 'sadness', 'surprise'] ### 7 classi
 else:
     classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
@@ -689,6 +711,7 @@ params = {
     "TRAIN_DROPOUT": TRAIN_DROPOUT,
     "FT_EPOCH": FT_EPOCH,
     "FT_LR": FT_LR,
+    "BATCH_SIZE_FT": BATCH_SIZE_FT,
     "FT_LR_DECAY_STEP": FT_LR_DECAY_STEP,
     "FT_LR_DECAY_RATE": FT_LR_DECAY_RATE,
     "FT_ES_PATIENCE": FT_ES_PATIENCE,
@@ -700,6 +723,9 @@ params = {
     "accuracy test set": test_acc,
     "accuracy train set": train_accuracy[-1],
     "accuracy validation set": val_accuracy[-1],
+    "loss test set": test_loss,
+    "loss train set": train_loss[-1],
+    "loss validation set": val_loss[-1],
 }
 
 save_parameters(params, unique_dir)
@@ -743,4 +769,75 @@ with open(additional_metrics_path, 'w') as f:
     f.write(f"Precision: {precision}\n")
     f.write(f"Recall: {recall}\n")
     f.write(f"AUC-ROC: {auc_roc}\n")
+
+# Salva history in un file JSON
+history_path = os.path.join(unique_dir, 'training_history.json')
+with open(history_path, 'w') as f:
+    json.dump(history, f)
+
+
+# Supponiamo che `learning_rate_logger.learning_rates` contenga i valori del learning rate
+learning_rates = learning_rate_logger.learning_rates
+
+# Salva i valori del learning rate in un file JSON
+learning_rate_path = os.path.join(unique_dir, 'learning_rates.json')
+with open(learning_rate_path, 'w') as f:
+    json.dump(learning_rates, f)
+
+# Calcola le percentuali
+cm_percent = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis] * 100
+
+disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=classNames)
+fig, ax = plt.subplots(figsize=(10, 10))
+disp.plot(cmap=plt.cm.Blues, ax=ax)
+
+# Aggiungi solo le percentuali come annotazioni
+for i in range(cm.shape[0]):
+    for j in range(cm.shape[1]):
+        ax.text(j, i, f'{cm_percent[i, j]:.1f}%', ha='center', va='center', color='red')
+
+plt.title('Confusion Matrix with Percentages')
+plt.xticks(rotation=25, ha='right')
+
+# Creazione della directory unica per i risultati
+base_dir = results_dir
+unique_dir = create_unique_directory(base_dir)
+
+plt.savefig(os.path.join(unique_dir, 'confusion_matrix_with_percentages.png'))
+plt.close()
+
+
+# Visualizza il grafico ROC per ogni classe
+n_classes = y_pred_prob.shape[1]
+y_test_bin = label_binarize(y_test, classes=range(n_classes))
+
+# Calcola ROC curve e AUC per ogni classe
+fpr = dict()
+tpr = dict()
+roc_auc = dict()
+for i in range(n_classes):
+    fpr[i], tpr[i], _ = roc_curve(y_test_bin[:, i], y_pred_prob[:, i])
+    roc_auc[i] = auc(fpr[i], tpr[i])
+
+# Calcola ROC curve e AUC micro-media
+fpr["micro"], tpr["micro"], _ = roc_curve(y_test_bin.ravel(), y_pred_prob.ravel())
+roc_auc["micro"] = auc(fpr["micro"], tpr["micro"])
+
+# Plot ROC curve per ogni classe
+plt.figure()
+colors = ['aqua', 'darkorange', 'cornflowerblue', 'green', 'red', 'purple', 'brown', 'pink', 'gray', 'olive']
+for i, color in zip(range(n_classes), colors):
+    plt.plot(fpr[i], tpr[i], color=color, lw=2,
+             label=f'ROC curve of class {i} (area = {roc_auc[i]:0.2f})')
+
+plt.plot([0, 1], [0, 1], 'k--', lw=2)
+plt.xlim([0.0, 1.0])
+plt.ylim([0.0, 1.05])
+plt.xlabel('False Positive Rate')
+plt.ylabel('True Positive Rate')
+plt.title('Receiver Operating Characteristic (ROC) Curve')
+plt.legend(loc="lower right")
+plt.savefig(os.path.join(unique_dir, 'roc_curve.png'))
+plt.show()
+
 

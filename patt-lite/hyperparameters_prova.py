@@ -10,11 +10,12 @@ from sklearn.utils import shuffle
 
 NUM_CLASSES = 7
 IMG_SHAPE = (120, 120, 3)
-dataset_name = 'Bosphorus'
+dataset_name = 'CK+'
+seven_classes = 'CKplus_numClasses7'
 # Caricamento dati
-file_output = os.path.join('datasets', dataset_name, 'bosphorus_data_augmentation.h5')
-best_path_save = dataset_name + '_hyperparameters'
-best_path = os.path.join(best_path_save, 'bosphorus_data_augmentation_hyperparameters.txt')
+file_output = os.path.join('datasets', dataset_name, seven_classes, 'ckplus.h5')
+best_path_save = dataset_name + '_hyperparameters_numClasses7'
+best_path = os.path.join(best_path_save, 'ckplus_hyperparameters.txt')
 if not os.path.exists(best_path_save):
     os.makedirs(best_path_save)
 
@@ -38,7 +39,7 @@ class PattLiteHyperModel(HyperModel):
 
     def build(self, hp):
         input_layer = tf.keras.Input(shape=self.IMG_SHAPE, name='universal_input')
-        batch_size = hp.Choice('BATCH_SIZE', [8, 16, 32, 64])
+        
         
         sample_resizing = tf.keras.layers.Resizing(224, 224, name="resize")
         data_augmentation = tf.keras.Sequential([
@@ -103,7 +104,7 @@ class PattLiteFineTuneHyperModel(HyperModel):
 
     def build(self, hp):
         self.base_model.trainable = True
-        batch_size = hp.Choice('BATCH_SIZE_FT', [8, 16, 32, 64])
+        
         fine_tune_from = len(self.base_model.layers) - self.unfreeze
         for layer in self.base_model.layers[:fine_tune_from]:
             layer.trainable = False

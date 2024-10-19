@@ -7,9 +7,8 @@ from sklearn.model_selection import train_test_split
 from imgaug import augmenters as iaa
 
 
-def get_unique_directory(base_path, dataset_name):
-    import os
-    dataset_dir = os.path.join(base_path, dataset_name)
+def get_unique_directory(base_path, dataset_name, dataset_name_2=None):
+    dataset_dir = os.path.join(base_path, dataset_name, dataset_name_2) if dataset_name_2 else os.path.join(base_path, dataset_name)
     if not os.path.exists(dataset_dir):
         os.makedirs(dataset_dir)
     return dataset_dir
@@ -49,7 +48,8 @@ def load_data(
     elif 'Bosphorus' in dataset_name:
         classNames = ['anger', 'disgust', 'fear', 'happy', 'sadness', 'surprise','neutral']
     elif 'CK+' in dataset_name:
-        classNames = ['neutral', 'anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness', 'surprise']
+        classNames = ['neutral', 'anger', 'disgust', 'fear', 'happy', 'sadness', 'surprise']  ## 7 classi
+        # classNames = ['neutral', 'anger', 'contempt', 'disgust', 'fear', 'happy', 'sadness', 'surprise']  ## 8 classi
     else:
         classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
 
@@ -73,32 +73,33 @@ def load_data(
                                 with open(file_path, 'r') as f:
                                     emotion_label = int(float(f.readline().strip()))
                                 
-                                # Trova i frame corrispondenti nella cartella dei frames
-                                frames_subject_path = os.path.join(frames_path, subject)
-                                frames_session_path = os.path.join(frames_subject_path, session)
-                                if os.path.isdir(frames_session_path):
-                                    frames = sorted(os.listdir(frames_session_path))
-                                    if len(frames) > 2:
-                                        # Primo frame come "neutro"
-                                        first_frame_path = os.path.join(frames_session_path, frames[0])
-                                        
-                                        if first_frame_path.endswith('.png'):
-                                            image = cv2.imread(first_frame_path, cv2.IMREAD_COLOR)
-                                            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                                            image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
-                                            X.append(image)
-                                            y.append(classNames.index('neutral'))
-                                            # Ultimi due frame come emotion_label
-                                            if jump == False: 
-                                                for frame in frames[-2:]:
-                                                    frame_path = os.path.join(frames_session_path, frame)
-                                                    image = cv2.imread(frame_path, cv2.IMREAD_COLOR)
-                                                    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-                                                    image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
-                                                    X.append(image)
-                                                    y.append(emotion_label)
-                                            else:
-                                                jump = False
+                                if emotion_label != 2:  # Filtra le espressioni 'contempt'
+                                    # Trova i frame corrispondenti nella cartella dei frames
+                                    frames_subject_path = os.path.join(frames_path, subject)
+                                    frames_session_path = os.path.join(frames_subject_path, session)
+                                    if os.path.isdir(frames_session_path):
+                                        frames = sorted(os.listdir(frames_session_path))
+                                        if len(frames) > 2:
+                                            # Primo frame come "neutro"
+                                            first_frame_path = os.path.join(frames_session_path, frames[0])
+                                            
+                                            if first_frame_path.endswith('.png'):
+                                                image = cv2.imread(first_frame_path, cv2.IMREAD_COLOR)
+                                                image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                                                image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
+                                                X.append(image)
+                                                y.append(classNames.index('neutral'))
+                                                # Ultimi due frame come emotion_label
+                                                if jump == False: 
+                                                    for frame in frames[-2:]:
+                                                        frame_path = os.path.join(frames_session_path, frame)
+                                                        image = cv2.imread(frame_path, cv2.IMREAD_COLOR)
+                                                        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+                                                        image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
+                                                        X.append(image)
+                                                        y.append(emotion_label)
+                                                else:
+                                                    jump = False
 
     elif dataset_name == 'Bosphorus':
         PATH = os.path.join(path_prefix, dataset_name, 'Bosphorus')
@@ -133,7 +134,20 @@ def load_data(
     print(f"X shape: {X.shape}")
     print(f"y shape: {y.shape}")
     
-    path_distribution = get_unique_directory('dataset_distribution', dataset_name)
+    # Filtra le etichette "2" e riscalare le etichette rimanenti
+    mask = y != 2
+    X = X[mask]
+    y = y[mask]
+    
+    # Riscalare le etichette rimanenti
+    unique_labels = np.unique(y)
+    label_mapping = {old_label: new_label for new_label, old_label in enumerate(unique_labels)}
+    y = np.array([label_mapping[label] for label in y])
+    
+    print(f"X shape after filtering: {X.shape}")
+    print(f"y shape after filtering: {y.shape}")
+    
+    path_distribution = get_unique_directory('dataset_distribution', dataset_name, 'CKplus_numClasses7')
     # Creare le directory per salvare i dati e i grafici
     dataset_dir = get_unique_directory('datasets', dataset_name)
     if not os.path.exists(dataset_dir):
@@ -161,7 +175,7 @@ def load_data(
         
         if is_imbalanced:
             print("Le classi sono sbilanciate. Applicazione di data augmentation...")
-            '''prima prova, salvato in boss_data_augmentation.h5'''
+            # '''prima prova, salvato in boss_data_augmentation.h5'''
             # augmentations = iaa.Sequential([
             #     iaa.Fliplr(0.5),  # flip orizzontale
             #     iaa.Affine(rotate=(-20, 20)),  # rotazione
@@ -275,9 +289,9 @@ def load_data(
 dataset_name='CK+' # 'CK+', 'RAFDB', 'FERP', 'JAFFE', 'Bosphorus'
 
 print("Loading data...")
-X, y = load_data('datasets', dataset_name, use_augmentation=True)
+X, y = load_data('datasets/CK+', dataset_name, use_augmentation=True)
 if 'CK+' in dataset_name:
-    file_output = 'ckplus_data_augmentation_5' 
+    file_output = 'ckplus_data_augmentation' 
 elif 'RAFDB' in dataset_name:
     file_output = 'rafdb' 
 elif 'FERP' in dataset_name:
@@ -291,7 +305,7 @@ else:
 
 file_output = file_output + '.h5'
 
-file_path_save = os.path.join('datasets', dataset_name, file_output)
+file_path_save = os.path.join('datasets', dataset_name, 'CKplus_numClasses7',file_output)
 with h5py.File(file_path_save, 'w') as dataset: 
     for split in X.keys():
         dataset.create_dataset(f'X_{split}', data=X[split])
