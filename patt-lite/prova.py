@@ -185,7 +185,7 @@ new_folder = dataset_name + f"_TRBATCH{BATCH_SIZE}_FT_BATCH{BATCH_SIZE_FT}"
 def load_images_and_labels(file_path,save_path):
     with h5py.File(file_path, 'r') as f:
 
-        if save_path=='processed_bosphorus_5.h5' or save_path == 'processed_cklus_5.h5':
+        if save_path=='processed_bosphorus_5.h5' or save_path == 'processed_cklus_5.h5' or save_path == 'ckplus_baseD_processed.h5':
 
             X_train = np.array(f['X_train'])
             y_train = np.array(f['y_train'])
@@ -208,8 +208,8 @@ def resize_images(X, target_size=(120, 120)):
 
 # Carica le immagini
 name_folder = dataset_name + '_processed_numClasses7'
-path_easy = os.path.join(name_folder,'ckplus.h5' )
-save_path = 'ckplus.h5'
+path_easy = os.path.join('results','PROCESSED_BASE_DATASET_BEST_PARAMETERS',dataset_name,'ckplus_baseD_processed.h5' )
+save_path = 'ckplus_baseD_processed.h5'
 X_train, y_train , X_valid, y_valid, X_test, y_test= load_images_and_labels( path_easy,save_path)
 
 # Ridimensiona le immagini difficili
@@ -265,7 +265,7 @@ plot_class_distribution(y_train, y_valid, y_test, classNames)
 # save_path = 'ckplus_data_augmentation_1.h5'
 # save_path = 'ckplus_data_augmentation_2.h5'
 # save_path = 'ckplus_data_augmentation_3.h5'
-save_path = 'ckplus_data_augmentation_5.h5'
+save_path = 'ckplus_noP.h5'
 
 ### BU_3DFE ###
 # save_path = 'bu_3dfe_data_augmentation.h5'
@@ -273,12 +273,12 @@ save_path = 'ckplus_data_augmentation_5.h5'
 # save_path = 'bu_3dfe_data_augmentation_3.h5'
 # save_path = 'bu_3dfe_data_augmentation_5.h5'
 
-dataset_file_path = os.path.join('datasets', dataset_name, save_path)
+dataset_file_path = os.path.join('results','BASE_MODEL', dataset_name, save_path)
 # valid_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'valid.h5')
 # test_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'test.h5')
 
 # # Carica i dati preprocessati
-# X_train_original, y_train_original, X_valid_original, y_valid_original, X_test_original, y_test_original = load_images_and_labels(dataset_file_path,save_path)
+X_train_original, y_train_original, X_valid_original, y_valid_original, X_test_original, y_test_original = load_images_and_labels(dataset_file_path,save_path)
 # X_valid_preprocessed, y_valid_preprocessed = load_preprocessed_data(valid_file_path)
 # X_test_preprocessed, y_test_preprocessed = load_preprocessed_data(test_file_path)
 
@@ -558,7 +558,9 @@ scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=schedule)
 learning_rate_logger = LearningRateLogger()
 
 # Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints/BEST_PARAMETERS_NUOVO", new_folder)
+
+
+checkpoint_dir = os.path.join("checkpoints", 'PROCESSED_BASE_DATASET_BEST_PARAMETERS', new_folder)
 
 
 # Callback per salvare i pesi del modello ogni 20 epoche
@@ -591,7 +593,7 @@ test_loss, test_acc = model.evaluate(X_test, y_test)
 
 
 # Create directory for saving the final model
-final_model_dir = os.path.join("final_models",dataset_name,'ck+_withoutprocessing_best_parameters', new_folder)
+final_model_dir = os.path.join("final_models",dataset_name,'PROCESSED_BASE_DATASET_BEST_PARAMETERS', new_folder)
 
 # Creazione della directory unica per i risultati
 base_dir = final_model_dir
@@ -626,7 +628,7 @@ print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
 # Create directory for saving plots
 
-results_dir = os.path.join("results",dataset_name,'ck+_withoutprocessing_best_parameters', new_folder)
+results_dir = os.path.join("results",'PROCESSED_BASE_DATASET_BEST_PARAMETERS',dataset_name, new_folder)
 
 # Calcola la matrice di confusione
 cm = confusion_matrix(y_test, y_pred)

@@ -51,7 +51,7 @@ def visualize_intermediate_steps(original, gray, equalized, blurred, normalized,
     axes[5].set_title('Processed Image')
     axes[5].axis('off')
     title_new = save_path.split('.')[0]
-    title_new = title_new+'_data_augmentation_3'+'.png'
+    title_new = title_new+'baseD_processed'+'.png'
     plot_save_path = os.path.join('classify',dataset_name, title_new)
     plt.savefig(plot_save_path)
     plt.show()
@@ -173,11 +173,11 @@ class SqueezeLayer(Layer):
     def call(self, inputs):
         return tf.squeeze(inputs, axis=self.axis)
 
-dataset_name='Bosphorus'
-# dataset_name='CK+'
+# dataset_name='Bosphorus'
+dataset_name='CK+'
 # dataset_name='BU_3DFE'
-name_best = dataset_name + '_hyperparameters'
-best_path = os.path.join(name_best,'bosphorus_data_augmentation_hyperparameters_3.txt')
+name_best = dataset_name + '_hyperparameters_numClasses7'
+best_path = os.path.join(name_best,'ck+_hyperparameters.txt')
 # Carica i migliori iperparametri dal file
 with open(best_path, 'r') as f:
     best_hps = {}
@@ -192,7 +192,7 @@ with open(best_path, 'r') as f:
 # Parametri
 NUM_CLASSES = 7
 IMG_SHAPE = (120, 120, 3)
-BATCH_SIZE = int(best_hps['BATCH_SIZE'])
+BATCH_SIZE = 8
 
 TRAIN_EPOCH = 100
 TRAIN_LR = best_hps['TRAIN_LR']
@@ -214,7 +214,7 @@ ES_LR_MIN_DELTA = 0.003 #quantità minima di cambiamento per considerare un migl
 
 
 if 'CK+' in dataset_name:
-    file_output = 'ckplus.h5'
+    file_output = 'ckplus_noP.h5'
     # file_output = 'ckplus_daia_augmentation_1.h5'
     # file_output = 'ckplus_daia_augmentation_2.h5'
     # file_output = 'ckplus_daia_augmentation_3.h5'
@@ -226,11 +226,11 @@ elif 'FERP' in dataset_name:
 elif 'JAFFE' in dataset_name:
     file_output = 'jaffe.h5'
 elif 'Bosphorus' in dataset_name:
-    # file_output = 'bosphorus.h5'
+    file_output = 'bosphorus_noP.h5'
     # file_output = 'bosphorus_data_augmentation.h5'
     # file_output = 'bosphorus_data_augmentation_2.h5'
     # file_output = 'bosphorus_data_augmentation_4.h5'
-    file_output = 'bosphorus_data_augmentation_3.h5'
+    # file_output = 'bosphorus_data_augmentation_3.h5'
     #  file_output = 'bosphorus_data_augmentation_5.h5'
 elif 'BU_3DFE' in dataset_name:
     file_output = 'bu_3dfe.h5'
@@ -241,7 +241,10 @@ elif 'BU_3DFE' in dataset_name:
 else:
     file_output = 'dataset.h5'
 
-name_file_path = os.path.join('datasets', dataset_name, file_output)
+
+
+
+name_file_path = os.path.join('results','BASE_MODEL', dataset_name, file_output)
 # Supponiamo che i tuoi dati siano memorizzati in un file HDF5 chiamato 'data.h5'
 with h5py.File(name_file_path, 'r') as f:
     X_train = np.array(f['X_train'])
@@ -368,12 +371,14 @@ processed_test_images = [preprocess_image(img, clip_limit, sigma) for img in X_t
 # save_path = 'processed_bosphorus_2.h5'
 # save_path = 'processed_bosphorus_3.h5'
 # save_path = 'processed_bosphorus_5.h5'
+save_path = 'bosphorus_baseD_processed.h5'
 
 ### CK+ ###
 # save_path = 'processed_ckplus_1.h5'
 # save_path = 'processed_ckplus_2.h5'
 # save_path = 'processed_ckplus_3.h5'
 # save_path = 'processed_ckplus_5.h5'
+#save_path = 'ckplus_baseD_processed.h5'
 
 ### BU_3DFE ###
 # save_path = 'processed_bu_3dfe.h5'
