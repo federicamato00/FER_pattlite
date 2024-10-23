@@ -13,9 +13,10 @@ IMG_SHAPE = (120, 120, 3)
 dataset_name = 'CK+'
 seven_classes = 'CKplus_numClasses7'
 # Caricamento dati
-file_output = os.path.join('datasets', dataset_name, seven_classes, 'ckplus.h5')
+file_output = os.path.join('datasets', dataset_name, seven_classes, 'ckplus_data_augmentation.h5')
 best_path_save = dataset_name + '_hyperparameters_numClasses7'
-best_path = os.path.join(best_path_save, 'ckplus_hyperparameters.txt')
+dataset_name_new = dataset_name.lower() + '_hyperparameters_new.txt'
+best_path = os.path.join(best_path_save, dataset_name_new)
 if not os.path.exists(best_path_save):
     os.makedirs(best_path_save)
 
@@ -54,13 +55,18 @@ class PattLiteHyperModel(HyperModel):
         base_model = tf.keras.Model(backbone.input, backbone.layers[-29].output, name='base_model')
 
         self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
+        
+        
         patch_extraction = tf.keras.Sequential([
         tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(hp.Float('dropout_rate', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
         tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
-        tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', 
-                               kernel_regularizer=regularizers.l2(hp.Float('l2_reg', min_value=1e-5, max_value=1e-2, sampling='LOG')))
-        ], name='patch_extraction')
-        
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(hp.Float('dropout_rate', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
+        tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=regularizers.l2(hp.Float('l2_reg', min_value=1e-5, max_value=1e-2, sampling='LOG')))
+       ], name='patch_extraction')
+
 
         global_average_layer = tf.keras.layers.GlobalAveragePooling2D(name='gap')
         pre_classification = tf.keras.Sequential([
@@ -94,6 +100,12 @@ class PattLiteHyperModel(HyperModel):
         
         return model
     
+    def fit(self, hp, model, *args, **kwargs):
+            return model.fit(
+                *args,
+                **kwargs,
+            )
+    
 
 class PattLiteFineTuneHyperModel(HyperModel):
     def __init__(self, IMG_SHAPE, NUM_CLASSES, base_model, unfreeze):
@@ -121,10 +133,15 @@ class PattLiteFineTuneHyperModel(HyperModel):
                                         tf.keras.layers.RandomContrast(factor=0.3)], name="augmentation")
         preprocess_input = tf.keras.applications.mobilenet.preprocess_input     
         patch_extraction = tf.keras.Sequential([
-        tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'), 
-        tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'), 
-        tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=regularizers.l2(hp.Float('l2_reg_fine_tuning', min_value=1e-5, max_value=1e-2, sampling='LOG')))
-    ], name='patch_extraction')
+        tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
+        tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
+        tf.keras.layers.BatchNormalization(),
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
+        tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=regularizers.l2(hp.Float('l2_reg_FT', min_value=1e-5, max_value=1e-2, sampling='LOG')))
+       ], name='patch_extraction')
+
         
         pre_classification = tf.keras.Sequential([
         tf.keras.layers.Dense(hp.Int('units_ft', min_value=32, max_value=128, step=32), activation='relu', 
@@ -157,6 +174,12 @@ class PattLiteFineTuneHyperModel(HyperModel):
                       metrics=['accuracy'])
         
         return model
+
+    def fit(self, hp, model, *args, **kwargs):
+            return model.fit(
+                *args,
+                **kwargs,
+            )
 
 
 backbone = tf.keras.applications.mobilenet.MobileNet(

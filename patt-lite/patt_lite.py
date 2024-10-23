@@ -92,7 +92,7 @@ def save_parameters(params, directory, filename="parameters.txt"):
 
 
 ############ modello con batch normalization prima di drop in patch extraction
-dataset_name='Bosphorus'
+dataset_name='CK+'
 
 class ExpandDimsLayer(Layer):
     def __init__(self, axis, **kwargs):
@@ -156,8 +156,8 @@ def load_images_and_labels(file_path):
 def resize_images(X, target_size=(120, 120)):
     return np.array([tf.image.resize(image, target_size).numpy() for image in X])
 
-# seven_classes = dataset_name + '_numClasses7'
-path_file = os.path.join('results/BASE_MODEL', dataset_name,'bosphorus_noP.h5')
+seven_classes = dataset_name + '_numClasses7'
+path_file = os.path.join('datasets', dataset_name,seven_classes,'ckplus_noP.h5')
 # Carica le immagini e le etichette
 X_train, y_train , X_valid, y_valid, X_test, y_test= load_images_and_labels( path_file)
 

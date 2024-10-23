@@ -154,7 +154,7 @@ class SqueezeLayer(Layer):
 # Parametri
 NUM_CLASSES = 7
 IMG_SHAPE = (120, 120, 3)
-BATCH_SIZE = 64 #int(best_hps['BATCH_SIZE'])p
+BATCH_SIZE = 8 #int(best_hps['BATCH_SIZE'])p
 
 TRAIN_EPOCH = 100
 TRAIN_LR = best_hps['TRAIN_LR']
@@ -172,7 +172,7 @@ FT_LR_DECAY_RATE = 1.0 #era a 1 ma ho messo 0.5
 # Epochs successive: Se l'epoca corrente è maggiore o uguale a FT_LR_DECAY_STEP,
 # la funzione riduce il learning rate moltiplicandolo per 0.5. Questo significa che il
 # learning rate viene dimezzato per rendere l'addestramento più fine e stabile nelle fasi successive.
-BATCH_SIZE_FT = 64
+BATCH_SIZE_FT = 32
 FT_ES_PATIENCE = 190 #numero di epoche di tolleranza per l'arresto anticipato, aumentato da 20 a 40
 FT_DROPOUT = best_hps['FT_DROPOUT']
 dropout_rate = best_hps['dropout_rate_FT']
@@ -185,7 +185,7 @@ new_folder = dataset_name + f"_TRBATCH{BATCH_SIZE}_FT_BATCH{BATCH_SIZE_FT}"
 def load_images_and_labels(file_path,save_path):
     with h5py.File(file_path, 'r') as f:
 
-        if save_path=='processed_bosphorus_5.h5' or save_path == 'processed_cklus_5.h5' or save_path == 'ckplus_baseD_processed.h5':
+        if save_path=='processed_bosphorus_5.h5' or save_path == 'processed_ckplus.h5' or save_path == 'ckplus_baseD_processed.h5':
 
             X_train = np.array(f['X_train'])
             y_train = np.array(f['y_train'])
@@ -206,10 +206,10 @@ def load_images_and_labels(file_path,save_path):
 def resize_images(X, target_size=(120, 120)):
     return np.array([tf.image.resize(image, target_size).numpy() for image in X])
 
+save_path = 'processed_ckplus.h5'
 # Carica le immagini
-name_folder = dataset_name + '_processed_numClasses7'
-path_easy = os.path.join('results','PROCESSED_BASE_DATASET_BEST_PARAMETERS',dataset_name,'ckplus_baseD_processed.h5' )
-save_path = 'ckplus_baseD_processed.h5'
+path_easy = os.path.join('datasets','processed', dataset_name + '_numClasses7',save_path )
+
 X_train, y_train , X_valid, y_valid, X_test, y_test= load_images_and_labels( path_easy,save_path)
 
 # Ridimensiona le immagini difficili
@@ -273,7 +273,7 @@ save_path = 'ckplus_noP.h5'
 # save_path = 'bu_3dfe_data_augmentation_3.h5'
 # save_path = 'bu_3dfe_data_augmentation_5.h5'
 
-dataset_file_path = os.path.join('results','BASE_MODEL', dataset_name, save_path)
+dataset_file_path = os.path.join('datasets','NO AUGMENTATION', dataset_name, save_path)
 # valid_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'valid.h5')
 # test_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'test.h5')
 
@@ -560,7 +560,7 @@ learning_rate_logger = LearningRateLogger()
 # Directory per salvare i pesi del modello
 
 
-checkpoint_dir = os.path.join("checkpoints", 'PROCESSED_BASE_DATASET_BEST_PARAMETERS', new_folder)
+checkpoint_dir = os.path.join("checkpoints", 'PROCESSED_BEST_PARAMETERS', new_folder)
 
 
 # Callback per salvare i pesi del modello ogni 20 epoche
@@ -593,7 +593,7 @@ test_loss, test_acc = model.evaluate(X_test, y_test)
 
 
 # Create directory for saving the final model
-final_model_dir = os.path.join("final_models",dataset_name,'PROCESSED_BASE_DATASET_BEST_PARAMETERS', new_folder)
+final_model_dir = os.path.join("final_models",dataset_name,'PROCESSED_BEST_PARAMETERS', new_folder)
 
 # Creazione della directory unica per i risultati
 base_dir = final_model_dir
@@ -628,7 +628,7 @@ print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
 # Create directory for saving plots
 
-results_dir = os.path.join("results",'PROCESSED_BASE_DATASET_BEST_PARAMETERS',dataset_name, new_folder)
+results_dir = os.path.join("results",'PROCESSED_BEST_PARAMETERS',dataset_name, new_folder)
 
 # Calcola la matrice di confusione
 cm = confusion_matrix(y_test, y_pred)

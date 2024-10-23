@@ -4,6 +4,7 @@ import h5py
 import numpy as np
 from sklearn.model_selection import train_test_split
 import matplotlib.pyplot as plt
+
 def get_unique_directory(base_path, dataset_name, dataset_name_2=None):
     dataset_dir = os.path.join(base_path, dataset_name, dataset_name_2) if dataset_name_2 else os.path.join(base_path, dataset_name)
     if not os.path.exists(dataset_dir):
@@ -16,7 +17,7 @@ def load_data(
     test_size=0.2,
     val_size=0.1,
 ):
-    X, y = [], []
+    X, y, subjects = [], [], []
 
     IMG_SIZE = 224 if 'RAFDB' in dataset_name else 120
 
@@ -32,7 +33,6 @@ def load_data(
         classNames = ['neutral', 'anger', 'disgust', 'fear', 'happy', 'sadness', 'surprise']
     else:
         classNames = ['anger', 'disgust', 'fear', 'happiness', 'neutral', 'sadness', 'surprise']
-        
 
     PATH = os.path.join(path_prefix, dataset_name)
     if dataset_name == 'CK+':
@@ -55,13 +55,11 @@ def load_data(
                                     emotion_label = int(float(f.readline().strip()))
                                 
                                 if emotion_label != 2:  # Filtra le espressioni 'contempt'
-                                    # Trova i frame corrispondenti nella cartella dei frames
                                     frames_subject_path = os.path.join(frames_path, subject)
                                     frames_session_path = os.path.join(frames_subject_path, session)
                                     if os.path.isdir(frames_session_path):
                                         frames = sorted(os.listdir(frames_session_path))
                                         if len(frames) > 2:
-                                            # Primo frame come "neutro"
                                             first_frame_path = os.path.join(frames_session_path, frames[0])
                                             
                                             if first_frame_path.endswith('.png'):
@@ -70,7 +68,7 @@ def load_data(
                                                 image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
                                                 X.append(image)
                                                 y.append(classNames.index('neutral'))
-                                                # Ultimi due frame come emotion_label
+                                                subjects.append(subject)
                                                 if jump == False: 
                                                     for frame in frames[-2:]:
                                                         frame_path = os.path.join(frames_session_path, frame)
@@ -79,6 +77,7 @@ def load_data(
                                                         image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
                                                         X.append(image)
                                                         y.append(emotion_label)
+                                                        subjects.append(subject)
                                                 else:
                                                     jump = False
 
@@ -106,34 +105,33 @@ def load_data(
                                 image = cv2.resize(image, (IMG_SIZE, IMG_SIZE))
                                 X.append(image)
                                 y.append(class_numeric)
+                                subjects.append(subject_folder)
     else:
         raise ValueError("Tipo di dataset non supportato: {}".format(dataset_name))
 
-        
-            
-    # Convert to numpy arrays
     X = np.array(X)
     y = np.array(y)
-    #  # Filtra le etichette "2" e riscalare le etichette rimanenti
-    # mask = y != 2
-    # X = X[mask]
-    # y = y[mask]
+    subjects = np.array(subjects)
+    print(f"X shape: {X.shape}")
+    print(f"y shape: {y.shape}")
     
-    # # Riscalare le etichette rimanenti
-    # unique_labels = np.unique(y)
-    # label_mapping = {old_label: new_label for new_label, old_label in enumerate(unique_labels)}
-    # y = np.array([label_mapping[label] for label in y])
+    mask = y != 2
+    X = X[mask]
+    y = y[mask]
+    subjects = subjects[mask]
     
-    # print(f"X shape after filtering: {X.shape}")
-    # print(f"y shape after filtering: {y.shape}")
+    unique_labels = np.unique(y)
+    label_mapping = {old_label: new_label for new_label, old_label in enumerate(unique_labels)}
+    y = np.array([label_mapping[label] for label in y])
     
-    path_distribution = get_unique_directory('dataset_distribution', dataset_name, 'BASE_MODEL')
-    # Creare le directory per salvare i dati e i grafici
+    print(f"X shape after filtering: {X.shape}")
+    print(f"y shape after filtering: {y.shape}")
+    
+    path_distribution = get_unique_directory('dataset_distribution', 'NO AUGMENTATION', dataset_name)
     dataset_dir = get_unique_directory('datasets', dataset_name)
     if not os.path.exists(dataset_dir):
         os.makedirs(dataset_dir)
     
-    # Visualizza la distribuzione delle classi prima di augmentation
     plt.figure(figsize=(10, 5))
     plt.bar(np.unique(y), np.bincount(y))
     plt.title('Distribuzione delle classi')
@@ -146,16 +144,22 @@ def load_data(
     plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
     plt.savefig(os.path.join(path_distribution, 'distribution_dataset.png'))
     
-    # Split the data into train, val, and test sets
-    X_train, X_temp, y_train, y_temp = train_test_split(X, y, test_size=test_size + val_size, random_state=42, stratify=y)
-    val_size_adjusted = val_size / (test_size + val_size)
-    X_val, X_test, y_val, y_test = train_test_split(X_temp, y_temp, test_size=val_size_adjusted, random_state=42, stratify=y_temp)
+    unique_subjects = np.unique(subjects)
+    train_subjects, test_subjects = train_test_split(unique_subjects, test_size=test_size, random_state=42)
+    train_subjects, val_subjects = train_test_split(train_subjects, test_size=val_size / (1 - test_size), random_state=42)
     
-    return {'train': X_train, 'val': X_val, 'test': X_test}, {'train': y_train, 'val': y_val, 'test': y_test}
+    train_mask = np.isin(subjects, train_subjects)
+    val_mask = np.isin(subjects, val_subjects)
+    test_mask = np.isin(subjects, test_subjects)
+    
+    X_train, y_train = X[train_mask], y[train_mask]
+    X_val, y_val = X[val_mask], y[val_mask]
+    X_test, y_test = X[test_mask], y[test_mask]
+    
+    return {'train': X_train, 'val': X_val, 'test': X_test}, {'train': y_train, 'val': y_val, 'test': y_test}, {'train': train_subjects, 'val': val_subjects, 'test': test_subjects}
 
-
-dataset_name='Bosphorus' # 'CK+', 'RAFDB', 'FERP', 'JAFFE', 'Bosphorus'
-X, y = load_data('datasets/Bosphorus', dataset_name)
+dataset_name='CK+' # 'CK+', 'RAFDB', 'FERP', 'JAFFE', 'Bosphorus'
+X, y, subjects = load_data('datasets/CK+', dataset_name)
 if 'CK+' in dataset_name:
     file_output = 'ckplus_noP.h5'
 elif 'RAFDB' in dataset_name:
@@ -169,10 +173,17 @@ elif 'Bosphorus' in dataset_name:
 else:
     file_output = 'dataset_noP.h5'
 
-file_save_path = os.path.join('results/BASE_MODEL', dataset_name, file_output)
+file_save_path = os.path.join('datasets/NO AUGMENTATION', dataset_name, file_output)
 with h5py.File(file_save_path, 'w') as dataset: 
     for split in X.keys():
         dataset.create_dataset(f'X_{split}', data=X[split])
         dataset.create_dataset(f'y_{split}', data=y[split])
 
 del X, y
+
+print(f"Dataset salvato in {file_save_path}")
+
+# Stampa i soggetti unici per ogni set
+print(f"Soggetti unici nel training set: {np.unique(subjects['train'])}")
+print(f"Soggetti unici nel validation set: {np.unique(subjects['val'])}")
+print(f"Soggetti unici nel test set: {np.unique(subjects['test'])}")
