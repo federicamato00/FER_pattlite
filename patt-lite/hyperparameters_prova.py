@@ -60,11 +60,11 @@ class PattLiteHyperModel(HyperModel):
         patch_extraction = tf.keras.Sequential([
         tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(hp.Float('dropout_rate', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_1', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
         tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(hp.Float('dropout_rate', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
-        tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=regularizers.l2(hp.Float('l2_reg', min_value=1e-5, max_value=1e-2, sampling='LOG')))
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_2', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
+        tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=regularizers.l2(hp.Float('l2_reg_1', min_value=1e-5, max_value=1e-2, sampling='LOG')))
        ], name='patch_extraction')
 
 
@@ -73,7 +73,7 @@ class PattLiteHyperModel(HyperModel):
         tf.keras.layers.Dense(hp.Int('units', min_value=32, max_value=128, step=32), activation='relu', 
                               kernel_regularizer=regularizers.l2(hp.Float('l2_reg_2', min_value=1e-5, max_value=1e-2, sampling='LOG'))),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(hp.Float('dropout_rate', min_value=0.3, max_value=0.7, step=0.1))
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_3', min_value=0.3, max_value=0.7, step=0.1))
         ], name='pre_classification')
 
         prediction_layer = tf.keras.layers.Dense(self.NUM_CLASSES, activation="softmax", name='classification_head')
@@ -132,22 +132,23 @@ class PattLiteFineTuneHyperModel(HyperModel):
         data_augmentation = tf.keras.Sequential([tf.keras.layers.RandomFlip(mode='horizontal'), 
                                         tf.keras.layers.RandomContrast(factor=0.3)], name="augmentation")
         preprocess_input = tf.keras.applications.mobilenet.preprocess_input     
+        
         patch_extraction = tf.keras.Sequential([
         tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT_1', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
         tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
-        tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=regularizers.l2(hp.Float('l2_reg_FT', min_value=1e-5, max_value=1e-2, sampling='LOG')))
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT_2', min_value = 0.3, max_value = 0.7, step = 0.1)),  # Aggiungi dropout
+        tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=regularizers.l2(hp.Float('l2_reg_FT_1', min_value=1e-5, max_value=1e-2, sampling='LOG')))
        ], name='patch_extraction')
 
         
         pre_classification = tf.keras.Sequential([
         tf.keras.layers.Dense(hp.Int('units_ft', min_value=32, max_value=128, step=32), activation='relu', 
-                              kernel_regularizer=regularizers.l2(hp.Float('l2_reg_FT', min_value=1e-5, max_value=1e-2, sampling='LOG'))),
+                              kernel_regularizer=regularizers.l2(hp.Float('l2_reg_FT_2', min_value=1e-5, max_value=1e-2, sampling='LOG'))),
         tf.keras.layers.BatchNormalization(),
-        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT', min_value=0.3, max_value=0.7, step=0.1))
+        tf.keras.layers.Dropout(hp.Float('dropout_rate_FT_3', min_value=0.3, max_value=0.7, step=0.1))
         ], name='pre_classification')
         self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
         inputs = input_layer
@@ -156,14 +157,14 @@ class PattLiteFineTuneHyperModel(HyperModel):
         x = preprocess_input(x)
         x = base_model(x, training=False)
         x = patch_extraction(x)
-        x = tf.keras.layers.SpatialDropout2D(hp.Float('FT_DROPOUT', min_value=0.2, max_value=0.5, step=0.1))(x)
+        x = tf.keras.layers.SpatialDropout2D(hp.Float('FT_DROPOUT_1', min_value=0.2, max_value=0.5, step=0.1))(x)
         x = global_average_layer(x)
-        x = tf.keras.layers.Dropout(hp.Float('FT_DROPOUT', min_value=0.2, max_value=0.5, step=0.1))(x)
+        x = tf.keras.layers.Dropout(hp.Float('FT_DROPOUT_2', min_value=0.2, max_value=0.5, step=0.1))(x)
         x = pre_classification(x)
         x = tf.keras.layers.Lambda(lambda x: tf.expand_dims(x, axis=1))(x)
         x = self_attention([x, x])
         x = tf.keras.layers.Lambda(lambda x: tf.squeeze(x, axis=1))(x)
-        x = tf.keras.layers.Dropout(hp.Float('FT_DROPOUT', min_value=0.2, max_value=0.5, step=0.1))(x)
+        x = tf.keras.layers.Dropout(hp.Float('FT_DROPOUT_3', min_value=0.2, max_value=0.5, step=0.1))(x)
         outputs = prediction_layer(x)
 
         model = tf.keras.Model(inputs, outputs, name='finetune-backbone')
@@ -190,7 +191,7 @@ base_model = tf.keras.Model(backbone.input, backbone.layers[-29].output, name='b
 tuner_train = RandomSearch(
     PattLiteHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=7),
     objective='val_accuracy',
-    max_trials=20,
+    max_trials=30,
     executions_per_trial=1,
     directory='pattlite_tuning',
     project_name='pattlite_train'
@@ -203,7 +204,7 @@ class_weights = dict(enumerate(class_weights))
 # Ricerca iperparametri per il modello di addestramento
 tuner_train.search(X_train, y_train,
                    validation_data=(X_valid, y_valid),
-                   epochs=10,
+                   epochs=6,
                    class_weight=class_weights,
                    )  # Usa il batch_size qui
 
@@ -214,7 +215,7 @@ best_train_hp = tuner_train.get_best_hyperparameters(num_trials=1)[0]
 tuner_finetune = RandomSearch(
     PattLiteFineTuneHyperModel(IMG_SHAPE=(120, 120, 3), NUM_CLASSES=7, base_model=best_train_model, unfreeze=59),
     objective='val_accuracy',
-    max_trials=20,
+    max_trials=30,
     executions_per_trial=1,
     directory='pattlite_tuning',
     project_name='pattlite_finetune'
@@ -223,7 +224,7 @@ tuner_finetune = RandomSearch(
 # Ricerca iperparametri per il modello di fine-tuning
 tuner_finetune.search(X_train, y_train,
                       validation_data=(X_valid, y_valid),
-                      epochs=10,
+                      epochs=6,
                       class_weight=class_weights,
                       )  # Usa il batch_size qui
 

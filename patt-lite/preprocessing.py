@@ -105,7 +105,9 @@ def remove_background(normalized):
 
                 # Ritaglia il volto dall'immagine
                 face_only = image_new[y:y+h, x:x+w]
-
+                if face_only.size == 0:
+                    return normalized
+                
                 # Ridimensiona il volto ritagliato alle dimensioni originali dell'immagine
                 face_resized = cv2.resize(face_only, (iw, ih), interpolation=cv2.INTER_LINEAR)
 

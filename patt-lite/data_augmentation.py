@@ -11,7 +11,7 @@ import h5py
 def load_data(path_prefix, dataset_name):
     name_path = dataset_name + '_numClasses7'
     path = os.path.join(path_prefix, name_path)
-    file_path = os.path.join(path, dataset_name.lower() + '_processed.h5')
+    file_path = os.path.join(path, dataset_name.lower() + '_preprocessed.h5')
 
     X_train, y_train, X_val, y_val, X_test, y_test = [], [], [], [], [], []
 
@@ -175,11 +175,11 @@ def data_augmentation(use_augmentation, additional_augmentation, additional_imag
 
 
 
-dataset_name='CK+' 
+dataset_name='Bosphorus' 
 
 print("Loading data...")
 path_prefix = os.path.join('datasets', 'processed')
-X, y, subjects = load_data(path_prefix,dataset_name)
+X, y = load_data(path_prefix,dataset_name)
 if 'CK+' in dataset_name:
     file_output = 'ckplus_data_augmentation' 
 elif 'RAFDB' in dataset_name:

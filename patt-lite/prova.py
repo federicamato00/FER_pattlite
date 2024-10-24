@@ -544,6 +544,7 @@ model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=FT_LR, global_cli
 # is referred to as a "warm restart" in contrast to a "cold restart" where a new set of small random numbers may be used as
 # a starting point.
 # The cosine annealing schedule is calculated as follows:
+
 def schedule(epoch, lr):
     lr = 0.5 * (1 + np.cos(np.pi * epoch / FT_EPOCH)) * FT_LR
     return lr
