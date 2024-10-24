@@ -16,7 +16,7 @@ seven_classes = dataset_name+'_numClasses7'
 # Caricamento dati
 file_output = os.path.join('datasets','data_augmentation', seven_classes, 'ckplus_data_augmentation.h5')
 best_path_save = dataset_name + '_hyperparameters_numClasses7'
-dataset_name_new = dataset_name.lower() + '_hyperparameters.txt'
+dataset_name_new = dataset_name.lower() + '_hyperparameters_nuovi.txt'
 best_path = os.path.join(best_path_save, dataset_name_new)
 if not os.path.exists(best_path_save):
     os.makedirs(best_path_save)
