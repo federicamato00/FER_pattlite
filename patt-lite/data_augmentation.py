@@ -1,5 +1,6 @@
 
 
+from sklearn.utils import shuffle
 import tensorflow as tf
 from matplotlib import pyplot as plt
 import numpy as np
@@ -51,32 +52,26 @@ def augment_images(images, labels, datagen, target_count):
 
 def data_augmentation(use_augmentation, additional_augmentation, additional_images_per_class, path_distribution, classNames, X_train, y_train, X_val, y_val, X_test, y_test):
     if use_augmentation:
-    
+
+        # Configura il generatore di immagini
         datagen = tf.keras.preprocessing.image.ImageDataGenerator(
-            featurewise_center=True, #Se impostato su True, sottrae la media di ogni immagine dal dataset. Utile per la normalizzazione.
-            samplewise_center=True, #Se impostato su True, sottrae la media di ogni immagine individualmente.
-            featurewise_std_normalization=False, #Se impostato su True, divide ogni immagine per la deviazione standard del dataset.
-            samplewise_std_normalization=True,#  Se impostato su True, divide ogni immagine per la deviazione standard dell'immagine stessa.
-            zca_whitening=True, #Se impostato su True, applica la ZCA whitening.
-            zca_epsilon=1e-06, #Epsilon per la ZCA whitening.
-            rotation_range=20, #Gradi di rotazione casuale.
-            width_shift_range=0.2, # Traslazione orizzontale casuale.
-            height_shift_range=0.2, # Traslazione verticale casuale.
-            brightness_range=[0.8,1.2], #Gamma di variazione della luminosità.
-            shear_range=0.2, #Intensità della trasformazione di taglio.
-            zoom_range=0.2, #Gamma di zoom casuale.
-            channel_shift_range=0.0, #Gamma di variazione casuale dei canali.
-            fill_mode='nearest', # Modalità di riempimento per i pixel fuori dai bordi.
-            cval=0.0, #Valore utilizzato per i pixel fuori dai bordi quando fill_mode è constant.
+            rotation_range=30,
+            width_shift_range=0.2,
+            height_shift_range=0.1,
+            brightness_range=[0.8, 1.2],
+            shear_range=0.1,
+            zoom_range=0.2,
+            channel_shift_range=0.0,
+            fill_mode='nearest',
+            cval=0.0,
             horizontal_flip=False,
             vertical_flip=False,
-            rescale=None, #Fattore di riscalamento.
-            preprocessing_function=None, #Funzione di preprocessing da applicare a ogni immagine.
-            data_format=None, #Formato dei dati, può essere channels_first o channels_last.
-            validation_split=0.0, #Percentuale di dati da utilizzare per la validazione.
-            interpolation_order=1, #Ordine di interpolazione per il ridimensionamento.
-            dtype=None #Tipo di dato delle immagini.
+            rescale=None,
+            validation_split=0.0,
+            interpolation_order=1,
         )
+
+        datagen.fit(X_train)
 
         def augment_and_balance(X, y, augmentations, additional_images_per_class):
             X_augmented, y_augmented = [], []
@@ -90,13 +85,13 @@ def data_augmentation(use_augmentation, additional_augmentation, additional_imag
                     augmented_images, augmented_labels = augment_images(class_images, class_labels, augmentations, target_count)
                     X_augmented.append(augmented_images)
                     y_augmented.append(augmented_labels)
-            
+
             X_augmented = np.concatenate(X_augmented, axis=0)
             y_augmented = np.concatenate(y_augmented, axis=0)
-            
+
             X = np.concatenate((X, X_augmented), axis=0)
             y = np.concatenate((y, y_augmented), axis=0)
-            
+
             X_augmented, y_augmented = [], []
             for class_idx in unique_classes:
                 class_images = X[y == class_idx]
@@ -105,21 +100,20 @@ def data_augmentation(use_augmentation, additional_augmentation, additional_imag
                 augmented_images, augmented_labels = augment_images(class_images, class_labels, augmentations, target_count)
                 X_augmented.append(augmented_images)
                 y_augmented.append(augmented_labels)
-            
+
 
             X_augmented = np.concatenate(X_augmented, axis=0)
             y_augmented = np.concatenate(y_augmented, axis=0)
-            
+
             X = np.concatenate((X, X_augmented), axis=0)
             y = np.concatenate((y, y_augmented), axis=0)
-            
+
             return X, y
-        
-        datagen.fit(X_train)
+
+
         X_train, y_train = augment_and_balance(X_train, y_train, datagen, additional_images_per_class)
-        datagen.fit(X_val)
         X_val, y_val = augment_and_balance(X_val, y_val, datagen, additional_images_per_class)
-        
+
         plt.figure(figsize=(10, 5))
         plt.bar(np.unique(y_train), np.bincount(y_train))
         plt.title('Distribuzione delle classi dopo data augmentation (train)')
@@ -127,7 +121,7 @@ def data_augmentation(use_augmentation, additional_augmentation, additional_imag
         plt.ylabel('Numero di campioni')
         plt.xticks(ticks=np.unique(y_train), labels=[classNames[i] for i in np.unique(y_train)])
         plt.savefig(os.path.join(path_distribution,dataset_name+'_numClasses7', 'dopo_augmentation_train.png'))
-        
+
         plt.figure(figsize=(10, 5))
         plt.bar(np.unique(y_val), np.bincount(y_val))
         plt.title('Distribuzione delle classi dopo data augmentation (val)')
@@ -135,7 +129,22 @@ def data_augmentation(use_augmentation, additional_augmentation, additional_imag
         plt.ylabel('Numero di campioni')
         plt.xticks(ticks=np.unique(y_val), labels=[classNames[i] for i in np.unique(y_val)])
         plt.savefig(os.path.join(path_distribution,dataset_name+'_numClasses7', 'dopo_augmentation_val.png'))
-    
+
+        X_train,y_train = shuffle(X_train, y_train, random_state=42)
+        X_val,y_val = shuffle(X_val, y_val, random_state=42)
+
+        # Visualizza alcune immagini augmentate
+        plt.figure(figsize=(10, 10))
+        for i in range(9):
+            plt.subplot(3, 3, i + 1)
+            plt.imshow(X_train[i].astype('uint8'))
+            plt.title(f'Classe: {classNames[y_train[i]]}')
+            plt.axis('off')
+        plt.suptitle('Esempi di immagini dopo data augmentation (train)')
+        plt.show()
+
+
+
     def more_augmentation (X,y,path_distribution,classNames):
             '''prova ad aumentare il numero di campioni per classe'''
             '''salvato in boss_data_augmentation_2.h5'''
@@ -149,10 +158,10 @@ def data_augmentation(use_augmentation, additional_augmentation, additional_imag
                 augmented_images, augmented_labels = augment_images(class_images, class_labels, datagen, target_count)
                 X_augmented.append(augmented_images)
                 y_augmented.append(augmented_labels)
-            
+
             X_augmented = np.concatenate(X_augmented, axis=0)
             y_augmented = np.concatenate(y_augmented, axis=0)
-            
+
             X = np.concatenate((X, X_augmented), axis=0)
             y = np.concatenate((y, y_augmented), axis=0)
             print("Ulteriore aumento del numero di campioni per classe completato.")
@@ -164,26 +173,26 @@ def data_augmentation(use_augmentation, additional_augmentation, additional_imag
             plt.ylabel('Numero di campioni')
             plt.xticks(ticks=np.unique(y), labels=[classNames[i] for i in np.unique(y)])
             plt.savefig(os.path.join(path_distribution,dataset_name+'_numClasses7', 'dopo_ulteriore_aumento_2.png'))
-        
+
             return X,y
-    
+
     if additional_augmentation == True:
             X_train, y_train = more_augmentation(X_train,y_train,path_distribution,classNames)
             X_val, y_val = more_augmentation(X_val,y_val,path_distribution,classNames)
-        
+
     return {'train': X_train, 'val': X_val, 'test': X_test}, {'train': y_train, 'val': y_val, 'test': y_test}
 
 
 
-dataset_name='Bosphorus' 
+dataset_name='CK+'
 
 print("Loading data...")
 path_prefix = os.path.join('datasets', 'processed')
 X, y = load_data(path_prefix,dataset_name)
 if 'CK+' in dataset_name:
-    file_output = 'ckplus_data_augmentation' 
+    file_output = 'ckplus_data_augmentation'
 elif 'RAFDB' in dataset_name:
-    file_output = 'rafdb' 
+    file_output = 'rafdb'
 elif 'FERP' in dataset_name:
     file_output = 'ferp'
 elif 'JAFFE' in dataset_name:
@@ -213,10 +222,12 @@ else:
 
 X,y = data_augmentation(True, False, 100, 'distribution_data_augmentation',classNames, X['train'], y['train'], X['val'], y['val'], X['test'], y['test'])
 
+plt.imshow(X['train'][0])
+plt.show()
 new_folder = dataset_name + '_numClasses7'
 path_new = os.path.join('datasets', 'data_augmentation', new_folder)
 file_path_save = os.path.join(path_new,file_output)
-with h5py.File(file_path_save, 'w') as dataset: 
+with h5py.File(file_path_save, 'w') as dataset:
     for split in X.keys():
         dataset.create_dataset(f'X_{split}', data=X[split])
         dataset.create_dataset(f'y_{split}', data=y[split])
