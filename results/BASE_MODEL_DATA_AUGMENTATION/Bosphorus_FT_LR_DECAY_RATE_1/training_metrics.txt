@@ -1,0 +1,138 @@
+Epoch 1
+Train Accuracy: 0.927122175693512
+Validation Accuracy: 0.47806525230407715
+Train Loss: 0.2326778918504715
+Validation Loss: 1.5225993394851685
+
+Epoch 2
+Train Accuracy: 0.9316770434379578
+Validation Accuracy: 0.48143982887268066
+Train Loss: 0.21910645067691803
+Validation Loss: 1.5330901145935059
+
+Epoch 3
+Train Accuracy: 0.9362319111824036
+Validation Accuracy: 0.476940393447876
+Train Loss: 0.21241672337055206
+Validation Loss: 1.544977068901062
+
+Epoch 4
+Train Accuracy: 0.9254658222198486
+Validation Accuracy: 0.48256468772888184
+Train Loss: 0.24130766093730927
+Validation Loss: 1.5048792362213135
+
+Epoch 5
+Train Accuracy: 0.933747410774231
+Validation Accuracy: 0.476940393447876
+Train Loss: 0.21297848224639893
+Validation Loss: 1.5392276048660278
+
+Epoch 6
+Train Accuracy: 0.9304347634315491
+Validation Accuracy: 0.483689546585083
+Train Loss: 0.22681836783885956
+Validation Loss: 1.524314045906067
+
+Epoch 7
+Train Accuracy: 0.9349896311759949
+Validation Accuracy: 0.4791901111602783
+Train Loss: 0.2192801833152771
+Validation Loss: 1.5378881692886353
+
+Epoch 8
+Train Accuracy: 0.9312629103660583
+Validation Accuracy: 0.4791901111602783
+Train Loss: 0.2251146137714386
+Validation Loss: 1.5298765897750854
+
+Epoch 9
+Train Accuracy: 0.9333333373069763
+Validation Accuracy: 0.483689546585083
+Train Loss: 0.20739533007144928
+Validation Loss: 1.5167138576507568
+
+Epoch 10
+Train Accuracy: 0.9304347634315491
+Validation Accuracy: 0.48143982887268066
+Train Loss: 0.22516503930091858
+Validation Loss: 1.536667823791504
+
+Epoch 11
+Train Accuracy: 0.9246376752853394
+Validation Accuracy: 0.47806525230407715
+Train Loss: 0.22592683136463165
+Validation Loss: 1.5530306100845337
+
+Epoch 12
+Train Accuracy: 0.9291925430297852
+Validation Accuracy: 0.4791901111602783
+Train Loss: 0.22138221561908722
+Validation Loss: 1.5199520587921143
+
+Epoch 13
+Train Accuracy: 0.9204968810081482
+Validation Accuracy: 0.4848144054412842
+Train Loss: 0.22822922468185425
+Validation Loss: 1.554665207862854
+
+Epoch 14
+Train Accuracy: 0.9296066164970398
+Validation Accuracy: 0.4758155345916748
+Train Loss: 0.2159157693386078
+Validation Loss: 1.5389492511749268
+
+Epoch 15
+Train Accuracy: 0.9221532344818115
+Validation Accuracy: 0.47469067573547363
+Train Loss: 0.23330526053905487
+Validation Loss: 1.5276089906692505
+
+Epoch 16
+Train Accuracy: 0.9287784695625305
+Validation Accuracy: 0.4791901111602783
+Train Loss: 0.22505444288253784
+Validation Loss: 1.5001837015151978
+
+Epoch 17
+Train Accuracy: 0.9312629103660583
+Validation Accuracy: 0.48256468772888184
+Train Loss: 0.2335878163576126
+Validation Loss: 1.5585970878601074
+
+Epoch 18
+Train Accuracy: 0.9291925430297852
+Validation Accuracy: 0.483689546585083
+Train Loss: 0.2245335578918457
+Validation Loss: 1.544389009475708
+
+Epoch 19
+Train Accuracy: 0.9312629103660583
+Validation Accuracy: 0.483689546585083
+Train Loss: 0.21037334203720093
+Validation Loss: 1.5007442235946655
+
+Epoch 20
+Train Accuracy: 0.9283643960952759
+Validation Accuracy: 0.4791901111602783
+Train Loss: 0.23906667530536652
+Validation Loss: 1.522742509841919
+
+Epoch 21
+Train Accuracy: 0.9370600581169128
+Validation Accuracy: 0.4848144054412842
+Train Loss: 0.2098020762205124
+Validation Loss: 1.5228053331375122
+
+Epoch 22
+Train Accuracy: 0.9300206899642944
+Validation Accuracy: 0.48256468772888184
+Train Loss: 0.21037080883979797
+Validation Loss: 1.5033472776412964
+
+Epoch 23
+Train Accuracy: 0.9242236018180847
+Validation Accuracy: 0.483689546585083
+Train Loss: 0.22965916991233826
+Validation Loss: 1.5060919523239136
+

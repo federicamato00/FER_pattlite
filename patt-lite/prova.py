@@ -244,43 +244,7 @@ else:
 
 plot_class_distribution(y_train, y_valid, y_test, classNames)
 
-# # Carica le immagini preprocessate
-# def load_preprocessed_data(file_path):
-#     with h5py.File(file_path, 'r') as f:
-#         X = np.array(f['X'])
-#         y = np.array(f['y'])
-#     return X, y
-
-# Percorsi ai file preprocessati
-### Bosphorus ###
-
-#save_path = 'bosphorus_data_augmentation_5.h5'
-# save_path = 'bosphorus_data_augmentation.h5'
-# save_path = 'bosphorus_data_augmentation_2.h5'
-# save_path = 'bosphorus_data_augmentation_3.h5'
-# save_path = 'bosphorus_data_augmentation_4.h5'
-
-
-### CK+ ###
-# save_path = 'ckplus_data_augmentation_1.h5'
-# save_path = 'ckplus_data_augmentation_2.h5'
-# save_path = 'ckplus_data_augmentation_3.h5'
 save_path = 'ckplus_noP.h5'
-
-### BU_3DFE ###
-# save_path = 'bu_3dfe_data_augmentation.h5'
-# save_path = 'bu_3dfe_data_augmentation_2.h5'
-# save_path = 'bu_3dfe_data_augmentation_3.h5'
-# save_path = 'bu_3dfe_data_augmentation_5.h5'
-
-dataset_file_path = os.path.join('datasets','NO AUGMENTATION', dataset_name, save_path)
-# valid_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'valid.h5')
-# test_file_path = os.path.join('datasets', 'preprocessing', dataset_name, 'SMOTE', 'test.h5')
-
-# # Carica i dati preprocessati
-X_train_original, y_train_original, X_valid_original, y_valid_original, X_test_original, y_test_original = load_images_and_labels(dataset_file_path,save_path)
-# X_valid_preprocessed, y_valid_preprocessed = load_preprocessed_data(valid_file_path)
-# X_test_preprocessed, y_test_preprocessed = load_preprocessed_data(test_file_path)
 
 # Verifica visiva delle immagini preprocessate
 def visualize_images(original_images,preprocessed_images, path_name, num_images=5):
@@ -351,22 +315,6 @@ base_model = tf.keras.Model(backbone.input, backbone.layers[-29].output, name='b
 
 self_attention = tf.keras.layers.Attention(use_scale=True, name='attention')
 
-####### con dropout e batch normalization prima di drop in patch extraction ########
-#accuracy =  su test set
-
-# patch_extraction = tf.keras.Sequential([
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
-#     tf.keras.layers.BatchNormalization(),
-#     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
-#     tf.keras.layers.BatchNormalization(),
-#     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
-#     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
-# ], name='patch_extraction')
-
-########################## modello iniziale ########################################
-# accuracy = 80.33% su test set
-
 patch_extraction = tf.keras.Sequential([
 
     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
@@ -375,24 +323,6 @@ patch_extraction = tf.keras.Sequential([
 
     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
 ], name='patch_extraction')
-
-# patch_extraction = tf.keras.Sequential([
-#     SeparableConv2DWithReg(256, kernel_size=4, strides=4, padding='same', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
-#     SeparableConv2DWithReg(256, kernel_size=2, strides=2, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg'])),
-#     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
-# ], name='patch_extraction')
-
-########################## modello con dropout ma senza batch ######################
-
-# accuracy = 79% su test set
-# patch_extraction = tf.keras.Sequential([
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=4, strides=4, padding='same', activation='relu'),
-#     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
-#     tf.keras.layers.SeparableConv2D(256, kernel_size=2, strides=2, padding='valid', activation='relu'),
-#     tf.keras.layers.Dropout(dropout_rate),  # Aggiungi dropout
-#     tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(best_hps['l2_reg']))
-# ], name='patch_extraction')
-
 
 ####################################################################################
 
@@ -423,28 +353,7 @@ x = self_attention([x, x])
 x = SqueezeLayer(axis=1)(x)  # Rimuovi la dimensione di sequenza dopo l'attenzione
 outputs = prediction_layer(x)
 
-############################ VECCHIO CODICE ########################################
 
-# inputs = input_layer
-# x = sample_resizing(inputs)
-# x = data_augmentation(x)
-# x = preprocess_input(x)
-# x = base_model(x, training=False)
-# x = patch_extraction(x)
-# x = global_average_layer(x)
-# x = tf.keras.layers.Dropout(TRAIN_DROPOUT)(x)
-# x = pre_classification(x)
-# x = self_attention([x, x])
-# outputs = prediction_layer(x)
-
-####################################################################################
-
-# Si sta utilizzando MobileNet come backbone e aggiungendo ulteriori livelli per adattarlo al task specifico
-# (classificazione delle espressioni facciali nel dataset CK+).
-# Durante l'addestramento iniziale, si sta addestrando solo i nuovi livelli aggiunti,
-# mentre i pesi di MobileNet rimangono congelati (non vengono aggiornati).
-# L'accuratezza che si ottiene dopo questo addestramento iniziale riflette le prestazioni del modello
-# sui dati di training e validation del dataset CK+.
 
 model = tf.keras.Model(inputs, outputs, name='train-head')
 model.compile(optimizer=keras.optimizers.Adam(learning_rate=TRAIN_LR, global_clipnorm=3.0), loss='sparse_categorical_crossentropy', metrics=['accuracy'])

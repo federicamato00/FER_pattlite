@@ -157,7 +157,7 @@ def resize_images(X, target_size=(120, 120)):
     return np.array([tf.image.resize(image, target_size).numpy() for image in X])
 
 seven_classes = dataset_name + '_numClasses7'
-path_file = os.path.join('datasets', dataset_name,seven_classes,'ckplus_noP.h5')
+path_file = os.path.join('datasets', 'data_augmentation',seven_classes,'ckplus_data_augmentation.h5')
 # Carica le immagini e le etichette
 X_train, y_train , X_valid, y_valid, X_test, y_test= load_images_and_labels( path_file)
 
@@ -405,7 +405,7 @@ history_finetune = model.fit(
 test_loss, test_acc = model.evaluate(X_test, y_test)
 
 # Create directory for saving the final model
-final_model_dir = os.path.join("final_models/BASE_MODEL", dataset_name)
+final_model_dir = os.path.join("final_models/BASE_MODEL_DATA_AUGMENTATION", dataset_name)
 
 # Creazione della directory unica per i risultati
 base_dir = final_model_dir
@@ -439,7 +439,7 @@ print(f"Accuratezza calcolata manualmente: {accuracy*100}%")
 
 
 # Create directory for saving plots
-results_dir = os.path.join("results/BASE_MODEL", dataset_name)
+results_dir = os.path.join("results/BASE_MODEL_DATA_AUGMENTATION", dataset_name)
 
 # Calcola la matrice di confusione
 cm = confusion_matrix(y_test, y_pred)

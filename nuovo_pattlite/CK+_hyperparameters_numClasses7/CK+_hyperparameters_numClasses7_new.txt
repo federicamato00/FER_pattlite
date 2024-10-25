@@ -1,0 +1,8 @@
+units_initial: 416
+dropout_initial: 0.5
+learning_rate_initial: 0.001
+l2_initial: 0.0007856771455016606
+units: 32
+dropout: 0.4
+learning_rate: 0.001
+l2: 2.4056133112088383e-05
