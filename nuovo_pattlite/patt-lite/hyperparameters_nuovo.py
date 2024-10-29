@@ -12,20 +12,11 @@ IMG_SHAPE = (120, 120, 3)
 BATCH_SIZE = 8
 
 TRAIN_EPOCH = 100
-TRAIN_LR = 1e-3
 TRAIN_ES_PATIENCE = 5
-TRAIN_LR_PATIENCE = 3
-TRAIN_MIN_LR = 1e-6
-TRAIN_DROPOUT = 0.1
+ES_LR_MIN_DELTA = 0.003
 
 FT_EPOCH = 500
-FT_LR = 1e-5
-FT_LR_DECAY_STEP = 80.0
-FT_LR_DECAY_RATE = 1
 FT_ES_PATIENCE = 20
-FT_DROPOUT = 0.4 
-
-ES_LR_MIN_DELTA = 0.003
 
 # Funzione per caricare le immagini e le etichette
 def load_images_and_labels(file_path):
@@ -90,11 +81,9 @@ class SqueezeLayer(Layer):
 
 # Funzione per costruire il modello per la fase di addestramento iniziale
 def build_initial_model(hp):
-    hp_units = hp.Int('units', min_value=32, max_value=512, step=32)
     hp_dropout = hp.Float('dropout', min_value=0.1, max_value=0.5, step=0.1)
     hp_learning_rate = hp.Choice('learning_rate', values=[1e-2, 1e-3, 1e-4])
     hp_l2 = hp.Float('l2', min_value=1e-5, max_value=1e-2, sampling='log')
-
     inputs = tf.keras.Input(shape=IMG_SHAPE, name='universal_input')
     x = sample_resizing(inputs)
     x = data_augmentation(x)
@@ -107,14 +96,11 @@ def build_initial_model(hp):
     ], name='patch_extraction')(x)
     x = global_average_layer(x)
     x = tf.keras.layers.Dropout(hp_dropout)(x)
-    x = tf.keras.layers.Dense(hp_units, activation='relu', kernel_regularizer=l2(hp_l2))(x)
+    x = pre_classification(x)
     x = tf.keras.layers.BatchNormalization()(x)
-    x = ExpandDimsLayer(axis=1)(x)
+    x = ExpandDimsLayer(axis=-1)(x)
     x = self_attention([x, x])
-    x = SqueezeLayer(axis=1)(x)
-    x = tf.keras.layers.Dropout(hp_dropout)(x)
-    # Aggiungi un livello Dense con un numero fisso di unità prima del livello di classificazione
-    x = tf.keras.layers.Dense(256, activation='relu')(x)
+    x = SqueezeLayer(axis=-1)(x)
     outputs = prediction_layer(x)
 
     model = tf.keras.Model(inputs, outputs, name='train-head')
@@ -156,14 +142,13 @@ assert y_test.size > 0, "y_test è vuoto"
 
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=TRAIN_ES_PATIENCE, min_delta=ES_LR_MIN_DELTA, restore_best_weights=True)
 # Esegui la ricerca degli iperparametri per la fase di addestramento iniziale
-tuner_initial.search(X_train, y_train, epochs=TRAIN_EPOCH, validation_data=(X_valid, y_valid), callbacks=[early_stopping_callback])
+tuner_initial.search(X_train, y_train, epochs=15, validation_data=(X_valid, y_valid), callbacks=[early_stopping_callback])
 
 # Ottieni i migliori iperparametri per la fase di addestramento iniziale
 best_hps_initial = tuner_initial.get_best_hyperparameters(num_trials=1)[0]
 
 print(f"""
 I migliori iperparametri per la fase di addestramento iniziale sono:
-- Unità nel livello denso: {best_hps_initial.get('units')}
 - Dropout: {best_hps_initial.get('dropout')}
 - Learning rate: {best_hps_initial.get('learning_rate')}
 - L2 Regularizer: {best_hps_initial.get('l2')}
@@ -182,7 +167,6 @@ model_initial.save_weights(initial_weights_path)
 
 # Funzione per costruire il modello per la fase di fine-tuning
 def build_finetune_model(hp):
-    hp_units = hp.Int('units', min_value=32, max_value=512, step=32)
     hp_dropout = hp.Float('dropout', min_value=0.1, max_value=0.5, step=0.1)
     hp_learning_rate = hp.Choice('learning_rate', values=[1e-5, 1e-4, 1e-3])
     hp_l2 = hp.Float('l2', min_value=1e-5, max_value=1e-2, sampling='log')
@@ -197,6 +181,7 @@ def build_finetune_model(hp):
             layer.trainable = False
 
     inputs = tf.keras.Input(shape=IMG_SHAPE, name='universal_input')
+
     x = sample_resizing(inputs)
     x = data_augmentation(x)
     x = preprocess_input(x)
@@ -207,20 +192,21 @@ def build_finetune_model(hp):
         tf.keras.layers.Conv2D(256, kernel_size=1, strides=1, padding='valid', activation='relu', kernel_regularizer=l2(hp_l2))
     ], name='patch_extraction')(x)
     x = global_average_layer(x)
-    x = tf.keras.layers.Dropout(hp_dropout)(x)
-    x = tf.keras.layers.Dense(hp_units, activation='relu', kernel_regularizer=l2(hp_l2))(x)
-    x = tf.keras.layers.BatchNormalization()(x)
-    x = ExpandDimsLayer(axis=1)(x)
+    x = pre_classification(x)
+    x = ExpandDimsLayer(axis=-1)(x)
     x = self_attention([x, x])
-    x = SqueezeLayer(axis=1)(x)
+    x = SqueezeLayer(axis=-1)(x)
     x = tf.keras.layers.Dropout(hp_dropout)(x)
-    # Aggiungi un livello Dense con un numero fisso di unità prima del livello di classificazione
-    x = tf.keras.layers.Dense(256, activation='relu')(x)
     outputs = prediction_layer(x)
 
     model = tf.keras.Model(inputs, outputs, name='finetune-backbone')
     model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=hp_learning_rate, global_clipnorm=3.0),
                   loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+    
+    # Carica i pesi del modello addestrato nella fase iniziale
+    model.load_weights(initial_weights_path)
+    print(f"Pesi del modello iniziale caricati da: {initial_weights_path}")
+
     return model
 
 # Configura Keras Tuner per la fase di fine-tuning
@@ -232,19 +218,16 @@ tuner_finetune = kt.RandomSearch(
     directory='my_dir',
     project_name='finetuning'
 )
-
-# Carica i pesi del modello addestrato nella fase iniziale
-model_initial.load_weights(initial_weights_path)
+early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='val_accuracy', patience=FT_ES_PATIENCE, min_delta=ES_LR_MIN_DELTA, restore_best_weights=True)
 
 # Esegui la ricerca degli iperparametri per la fase di fine-tuning
-tuner_finetune.search(X_train, y_train, epochs=FT_EPOCH, validation_data=(X_valid, y_valid), callbacks=[early_stopping_callback])
+tuner_finetune.search(X_train, y_train, epochs=15, validation_data=(X_valid, y_valid), callbacks=[early_stopping_callback])
 
 # Ottieni i migliori iperparametri per la fase di fine-tuning
 best_hps_finetune = tuner_finetune.get_best_hyperparameters(num_trials=1)[0]
 
 print(f"""
 I migliori iperparametri per la fase di fine-tuning sono:
-- Unità nel livello denso: {best_hps_finetune.get('units')}
 - Dropout: {best_hps_finetune.get('dropout')}
 - Learning rate: {best_hps_finetune.get('learning_rate')}
 - L2 Regularizer: {best_hps_finetune.get('l2')}
@@ -262,11 +245,9 @@ def save_parameters(params, directory, filename="parameters.txt"):
 
 # Definisci i migliori iperparametri in un dizionario
 best_hps_dict = {
-    'units_initial': best_hps_initial.get('units'),
     'dropout_initial': best_hps_initial.get('dropout'),
     'learning_rate_initial': best_hps_initial.get('learning_rate'),
-    'l2_initial: ': best_hps_initial.get('l2'),
-    'units': best_hps_finetune.get('units'),
+    'l2_initial': best_hps_initial.get('l2'),
     'dropout': best_hps_finetune.get('dropout'),
     'learning_rate': best_hps_finetune.get('learning_rate'),
     'l2': best_hps_finetune.get('l2')
@@ -274,3 +255,15 @@ best_hps_dict = {
 
 # Salva i migliori iperparametri su un file
 save_parameters(best_hps_dict, directory='CK+_hyperparameters_numClasses7', filename=dataset_name+'_hyperparameters_numClasses7_new.txt')
+
+# Carica i pesi migliori del modello iniziale nel modello di fine-tuning
+model_finetune = tuner_finetune.hypermodel.build(best_hps_finetune)
+model_finetune.load_weights(initial_weights_path)
+
+# Continua con l'addestramento del fine-tuning
+history_finetune = model_finetune.fit(X_train, y_train, epochs=FT_EPOCH, validation_data=(X_valid, y_valid), callbacks=[early_stopping_callback])
+
+# Salva i pesi del modello fine-tuned
+finetuned_weights_path = os.path.join("finetuned_weights", dataset_name, "finetuned_model.weights.h5")
+os.makedirs(os.path.dirname(finetuned_weights_path), exist_ok=True)
+model_finetune.save_weights(finetuned_weights_path)

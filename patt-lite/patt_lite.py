@@ -293,10 +293,10 @@ x = global_average_layer(x)
 x = tf.keras.layers.Dropout(TRAIN_DROPOUT)(x)
 x = pre_classification(x)
 # Usa il nuovo livello nel tuo modello
-x = ExpandDimsLayer(axis=1)(x)  # Aggiungi una dimensione di sequenza
+x = ExpandDimsLayer(axis=-1)(x)  # Aggiungi una dimensione di sequenza
 x = self_attention([x, x])
 # Usa il nuovo livello nel tuo modello
-x = SqueezeLayer(axis=1)(x)  # Rimuovi la dimensione di sequenza dopo l'attenzione
+x = SqueezeLayer(axis=-1)(x)  # Rimuovi la dimensione di sequenza dopo l'attenzione
 outputs = prediction_layer(x)
 
 model = tf.keras.Model(inputs, outputs, name='train-head')
@@ -333,11 +333,6 @@ for layer in base_model.layers[fine_tune_from:]:
     if isinstance(layer, tf.keras.layers.BatchNormalization):
         layer.trainable = False
 
-
-# Carica i pesi del modello addestrato nella fase iniziale
-model.load_weights(initial_weights_path)
-print(f"Pesi del modello iniziale caricati da: {initial_weights_path}")
-
 ################################## MIO CODICE ########################################
 inputs = input_layer
 x = sample_resizing(inputs)
@@ -349,9 +344,9 @@ x = tf.keras.layers.SpatialDropout2D(FT_DROPOUT)(x)
 x = global_average_layer(x)
 x = tf.keras.layers.Dropout(FT_DROPOUT)(x)
 x = pre_classification(x)
-x = ExpandDimsLayer(axis=1)(x)  # Aggiungi una dimensione di sequenza
+x = ExpandDimsLayer(axis=-1)(x)  # Aggiungi una dimensione di sequenza
 x = self_attention([x, x])
-x = SqueezeLayer(axis=1)(x)  # Rimuovi la dimensione di sequenza dopo l'attenzione
+x = SqueezeLayer(axis=-1)(x)  # Rimuovi la dimensione di sequenza dopo l'attenzione
 x = tf.keras.layers.Dropout(FT_DROPOUT)(x)
 
 outputs = prediction_layer(x)
@@ -372,23 +367,6 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram
 early_stopping_callback = tf.keras.callbacks.EarlyStopping(monitor='accuracy', min_delta=ES_LR_MIN_DELTA, patience=FT_ES_PATIENCE, restore_best_weights=True)
 scheduler_callback = tf.keras.callbacks.LearningRateScheduler(schedule=scheduler)
 
-# Directory per salvare i pesi del modello
-checkpoint_dir = os.path.join("checkpoints/BASE_MODEL", dataset_name)
-
-
-# Callback per salvare i pesi del modello ogni 20 epoche
-
-checkpoint_callback = ModelCheckpoint(
-    filepath=os.path.join(checkpoint_dir,'model_weights_epoch_{epoch:02d}.weights.h5'),  # Percorso del file di salvataggio
-    save_weights_only=True,  # Salva solo i pesi del modello
-    save_best_only=True,  # Salva solo il miglior modello
-
-)
-# Carica i pesi del modello dal checkpoint più recente
-latest_checkpoint = tf.train.latest_checkpoint(checkpoint_dir)
-if latest_checkpoint:
-    model.load_weights(latest_checkpoint)
-    print(f"Pesi del modello caricati da: {latest_checkpoint}")
 
 learning_rate_logger = LearningRateLogger()
 # Continua l'addestramento
@@ -399,7 +377,7 @@ history_finetune = model.fit(
     validation_data=(X_valid, y_valid),
     verbose=1,
     initial_epoch=history.epoch[-TRAIN_ES_PATIENCE],
-    callbacks=[early_stopping_callback, scheduler_callback, tensorboard_callback, checkpoint_callback,learning_rate_logger]
+    callbacks=[early_stopping_callback, scheduler_callback, tensorboard_callback,learning_rate_logger]
 )
 
 test_loss, test_acc = model.evaluate(X_test, y_test)
